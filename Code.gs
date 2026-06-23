@@ -931,8 +931,10 @@ function initializeAdminSpreadsheet() {
     usersSheet = ss.insertSheet("users");
     usersSheet.appendRow(["id", "name", "mobile", "email", "password_hash", "role", "active", "spreadsheet_id", "created_at"]);
     usersSheet.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#d9ead3");
-    
-    // Insert a default Admin user (password: admin123)
+  }
+  
+  // Safely insert admin if users sheet is empty or only has headers
+  if (usersSheet.getLastRow() <= 1) {
     var defaultAdmin = [
       1,
       "Super Admin",
