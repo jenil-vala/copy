@@ -22,6 +22,18 @@ function sha256(input) {
   return output;
 }
 
+// Open and verify the Admin Spreadsheet (throws structured warning if script is unbound)
+function getAdminSpreadsheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) {
+    throw new Error("This Google Apps Script is not bound to a Google Spreadsheet. " +
+                     "Please make sure you create this script by opening your central 'Thread Track Admin DB' Google Sheet, " +
+                     "and clicking 'Extensions' -> 'Apps Script' on the top menu bar, then pasting the code there. " +
+                     "If you created a standalone script, it will not be able to find the active sheet!");
+  }
+  return ss;
+}
+
 // Open a spreadsheet by ID, or fall back to the active one (Admin Spreadsheet)
 function getSpreadsheet(spreadsheetId) {
   if (spreadsheetId && spreadsheetId !== "null" && spreadsheetId !== "undefined") {
@@ -31,7 +43,7 @@ function getSpreadsheet(spreadsheetId) {
       Logger.log("Error opening spreadsheet by ID " + spreadsheetId + ": " + e.message);
     }
   }
-  return SpreadsheetApp.getActiveSpreadsheet();
+  return getAdminSpreadsheet();
 }
 
 // Convert sheet data to array of objects using headers
@@ -115,7 +127,7 @@ function doGet(e) {
   var action = e.parameter.action;
   var spreadsheetId = e.parameter.spreadsheetId;
   
-  var adminSS = SpreadsheetApp.getActiveSpreadsheet();
+  var adminSS = getAdminSpreadsheet();
   var userSS = getSpreadsheet(spreadsheetId);
   
   try {
@@ -493,7 +505,7 @@ function doPost(e) {
   var action = postData.action;
   var spreadsheetId = postData.spreadsheetId;
   
-  var adminSS = SpreadsheetApp.getActiveSpreadsheet();
+  var adminSS = getAdminSpreadsheet();
   var userSS = getSpreadsheet(spreadsheetId);
   
   try {
@@ -893,7 +905,7 @@ function doPost(e) {
 
 // Admin function to initialize the main Admin Spreadsheet (manually run once or automatically)
 function initializeAdminSpreadsheet() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getAdminSpreadsheet();
   
   var usersSheet = ss.getSheetByName("users");
   if (!usersSheet) {
