@@ -62,15 +62,16 @@ function getSpreadsheet(spreadsheetId) {
   return getAdminSpreadsheet();
 }
 
-// Convert sheet data to array of objects using headers
+// Convert sheet data to array of objects using headers (optimized for single API call)
 function getSheetData(sheet) {
   if (!sheet) return [];
-  var lastRow = sheet.getLastRow();
-  if (lastRow <= 1) return [];
-  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  var data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+  var values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
   
-  return data.map(function(row) {
+  var headers = values[0];
+  var rows = values.slice(1);
+  
+  return rows.map(function(row) {
     var obj = {};
     headers.forEach(function(header, index) {
       obj[header] = row[index];
@@ -147,13 +148,14 @@ function doGet(e) {
     var action = e.parameter.action;
     var spreadsheetId = e.parameter.spreadsheetId;
     
-    var adminSS = getAdminSpreadsheet();
-    var userSS = getSpreadsheet(spreadsheetId);
+    var adminSS;
+    var userSS;
     
     if (action === "initialize") {
       initializeAdminSpreadsheet();
       return jsonResponse({ success: true, message: "Admin database initialized successfully." });
     } else if (action === "getUsers") {
+      adminSS = getAdminSpreadsheet();
       var usersSheet = adminSS.getSheetByName("users");
       var users = getSheetData(usersSheet);
       // Remove password hash from response
@@ -161,6 +163,7 @@ function doGet(e) {
       return jsonResponse({ success: true, users: users });
       
     } else if (action === "getAuditLogs") {
+      adminSS = getAdminSpreadsheet();
       var logsSheet = adminSS.getSheetByName("audit_logs");
       var logs = getSheetData(logsSheet);
       // Return newest first
@@ -168,6 +171,7 @@ function doGet(e) {
       return jsonResponse({ success: true, logs: logs.slice(0, 200) });
       
     } else if (action === "getVendors") {
+      userSS = getSpreadsheet(spreadsheetId);
       var type = e.parameter.type;
       var vendorsSheet = userSS.getSheetByName("vendors");
       var vendors = getSheetData(vendorsSheet);
@@ -177,6 +181,7 @@ function doGet(e) {
       return jsonResponse({ success: true, vendors: vendors });
       
     } else if (action === "getSarees") {
+      userSS = getSpreadsheet(spreadsheetId);
       var stage = e.parameter.stage;
       var status = e.parameter.status;
       var vendorId = e.parameter.vendorId;
@@ -210,6 +215,7 @@ function doGet(e) {
       return jsonResponse({ success: true, sarees: sarees });
       
     } else if (action === "getNextLot") {
+      userSS = getSpreadsheet(spreadsheetId);
       var sareesSheet = userSS.getSheetByName("sarees");
       var sarees = getSheetData(sareesSheet);
       var maxLot = 1000; // default start
@@ -220,6 +226,7 @@ function doGet(e) {
       return jsonResponse({ success: true, nextLot: maxLot + 1 });
       
     } else if (action === "getSareeDetails") {
+      userSS = getSpreadsheet(spreadsheetId);
       var sareeId = e.parameter.sareeId;
       var sareesSheet = userSS.getSheetByName("sarees");
       var historySheet = userSS.getSheetByName("workflow_history");
@@ -252,6 +259,7 @@ function doGet(e) {
       return jsonResponse({ success: true, saree: saree, history: sareeHistory });
       
     } else if (action === "getHisab") {
+      userSS = getSpreadsheet(spreadsheetId);
       var vendorsSheet = userSS.getSheetByName("vendors");
       var historySheet = userSS.getSheetByName("workflow_history");
       var paymentsSheet = userSS.getSheetByName("payments");
@@ -302,6 +310,7 @@ function doGet(e) {
       return jsonResponse({ success: true, hisab: hisabSummary });
       
     } else if (action === "getVendorLedger") {
+      userSS = getSpreadsheet(spreadsheetId);
       var vendorId = e.parameter.vendorId;
       var vendorsSheet = userSS.getSheetByName("vendors");
       var historySheet = userSS.getSheetByName("workflow_history");
@@ -317,7 +326,7 @@ function doGet(e) {
       var sarees = getSheetData(sareesSheet);
       
       var sareeMap = {};
-      serees.forEach(function(s) { sareeMap[s.saree_id] = s; });
+      sarees.forEach(function(s) { sareeMap[s.saree_id] = s; });
       
       var ledger = [];
       
@@ -378,6 +387,7 @@ function doGet(e) {
       });
       
     } else if (action === "getPayments") {
+      userSS = getSpreadsheet(spreadsheetId);
       var paymentsSheet = userSS.getSheetByName("payments");
       var vendorsSheet = userSS.getSheetByName("vendors");
       var payments = getSheetData(paymentsSheet);
@@ -396,6 +406,7 @@ function doGet(e) {
       return jsonResponse({ success: true, payments: payments });
       
     } else if (action === "getDashboardStats") {
+      userSS = getSpreadsheet(spreadsheetId);
       var sareesSheet = userSS.getSheetByName("sarees");
       var vendorsSheet = userSS.getSheetByName("vendors");
       var historySheet = userSS.getSheetByName("workflow_history");
@@ -443,6 +454,7 @@ function doGet(e) {
       return jsonResponse({ success: true, summary: summary, pipeline: pipeline });
       
     } else if (action === "getReports") {
+      userSS = getSpreadsheet(spreadsheetId);
       var reportType = e.parameter.reportType;
       var filterVendor = e.parameter.vendorId;
       var filterType = e.parameter.vendorType;
@@ -528,13 +540,14 @@ function doPost(e) {
     var action = postData.action;
     var spreadsheetId = postData.spreadsheetId;
     
-    var adminSS = getAdminSpreadsheet();
-    var userSS = getSpreadsheet(spreadsheetId);
+    var adminSS;
+    var userSS;
     
     if (action === "initialize") {
       initializeAdminSpreadsheet();
       return jsonResponse({ success: true, message: "Admin database initialized successfully." });
     } else if (action === "login") {
+      adminSS = getAdminSpreadsheet();
       var email = postData.email;
       var password = postData.password;
       
@@ -587,6 +600,7 @@ function doPost(e) {
       
     } else if (action === "addUser") {
       // Create new user (Admin only)
+      adminSS = getAdminSpreadsheet();
       var usersSheet = adminSS.getSheetByName("users");
       var users = getSheetData(usersSheet);
       
@@ -649,6 +663,7 @@ function doPost(e) {
       return jsonResponse({ success: true, message: "User created successfully", user: newUser });
       
     } else if (action === "updateUser") {
+      adminSS = getAdminSpreadsheet();
       var usersSheet = adminSS.getSheetByName("users");
       var users = getSheetData(usersSheet);
       var userId = postData.userId;
@@ -679,6 +694,7 @@ function doPost(e) {
       return jsonResponse({ success: true, message: "User updated successfully" });
       
     } else if (action === "addVendor") {
+      userSS = getSpreadsheet(spreadsheetId);
       var vendorsSheet = userSS.getSheetByName("vendors");
       var vendors = getSheetData(vendorsSheet);
       var vendorId = vendors.length > 0 ? Math.max.apply(null, vendors.map(function(v) { return parseInt(v.vendor_id); })) + 1 : 1;
@@ -698,6 +714,7 @@ function doPost(e) {
       return jsonResponse({ success: true, vendor: newVendor });
       
     } else if (action === "updateVendor") {
+      userSS = getSpreadsheet(spreadsheetId);
       var vendorsSheet = userSS.getSheetByName("vendors");
       var vendors = getSheetData(vendorsSheet);
       var vendorId = postData.vendor_id;
@@ -716,6 +733,7 @@ function doPost(e) {
       return jsonResponse({ success: true, message: "Vendor updated" });
       
     } else if (action === "deleteVendor") {
+      userSS = getSpreadsheet(spreadsheetId);
       var vendorsSheet = userSS.getSheetByName("vendors");
       var vendors = getSheetData(vendorsSheet);
       var vendorId = postData.vendorId;
@@ -725,6 +743,7 @@ function doPost(e) {
       return jsonResponse({ success: true, message: "Vendor deleted" });
       
     } else if (action === "addSaree") {
+      userSS = getSpreadsheet(spreadsheetId);
       var sareesSheet = userSS.getSheetByName("sarees");
       var sarees = getSheetData(sareesSheet);
       
@@ -750,6 +769,7 @@ function doPost(e) {
       return jsonResponse({ success: true, saree: newSaree });
       
     } else if (action === "sendSareeToStage") {
+      userSS = getSpreadsheet(spreadsheetId);
       var sareeId = postData.sareeId;
       var stageName = postData.stage_name;
       var vendorId = postData.vendor_id;
@@ -789,6 +809,7 @@ function doPost(e) {
       return jsonResponse({ success: true, message: "Saree sent to stage " + stageName });
       
     } else if (action === "receiveSareeFromStage") {
+      userSS = getSpreadsheet(spreadsheetId);
       var sareeId = postData.sareeId;
       var finalCost = parseFloat(postData.work_cost || 0);
       var remarks = postData.remarks || "";
@@ -835,6 +856,7 @@ function doPost(e) {
       return jsonResponse({ success: true, message: "Saree received from stage successfully" });
       
     } else if (action === "rollbackSareeStage") {
+      userSS = getSpreadsheet(spreadsheetId);
       var sareeId = postData.sareeId;
       var sareesSheet = userSS.getSheetByName("sarees");
       var sarees = getSheetData(sareesSheet);
@@ -885,6 +907,7 @@ function doPost(e) {
       return jsonResponse({ success: true, message: "Workflow rolled back successfully" });
       
     } else if (action === "deleteSaree") {
+      userSS = getSpreadsheet(spreadsheetId);
       var sareeId = postData.sareeId;
       var sareesSheet = userSS.getSheetByName("sarees");
       var sarees = getSheetData(sareesSheet);
@@ -901,6 +924,7 @@ function doPost(e) {
       return jsonResponse({ success: true, message: "Saree lot and history deleted" });
       
     } else if (action === "addPayment") {
+      userSS = getSpreadsheet(spreadsheetId);
       var paymentsSheet = userSS.getSheetByName("payments");
       var payments = getSheetData(paymentsSheet);
       var paymentId = payments.length > 0 ? Math.max.apply(null, payments.map(function(p) { return parseInt(p.payment_id); })) + 1 : 1;
@@ -920,6 +944,7 @@ function doPost(e) {
       return jsonResponse({ success: true, payment: newPayment });
       
     } else if (action === "deletePayment") {
+      userSS = getSpreadsheet(spreadsheetId);
       var paymentId = postData.paymentId;
       var paymentsSheet = userSS.getSheetByName("payments");
       var payments = getSheetData(paymentsSheet);
