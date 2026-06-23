@@ -172,8 +172,10 @@
 
     async function loadDashboardData() {
       try {
-        const statsRes = await callApi('getDashboardStats');
-        const sareesRes = await callApi('getSarees');
+        const [statsRes, sareesRes] = await Promise.all([
+          callApi('getDashboardStats'),
+          callApi('getSarees')
+        ]);
         
         sareesData = sareesRes.sarees;
         

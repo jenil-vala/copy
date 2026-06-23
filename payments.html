@@ -128,7 +128,11 @@
 
     async function loadData() {
       try {
-        const vRes = await callApi('getVendors');
+        const [vRes, pRes] = await Promise.all([
+          callApi('getVendors'),
+          callApi('getPayments')
+        ]);
+        
         vendorsList = vRes.vendors;
         
         // Populate vendor options
@@ -139,7 +143,6 @@
         });
 
         // Load payments
-        const pRes = await callApi('getPayments');
         paymentsList = pRes.payments;
         renderPaymentsTable();
       } catch (err) {

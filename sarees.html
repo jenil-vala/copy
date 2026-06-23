@@ -800,8 +800,7 @@
     $('#filter-search, #filter-stage, #filter-status').on('change keyup', renderSareesTable);
 
     $(document).ready(async function() {
-      await loadVendors();
-      await loadSarees();
+      await Promise.all([loadVendors(), loadSarees()]);
 
       // Handle redirect filters
       if (urlStage) {
