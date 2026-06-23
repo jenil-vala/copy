@@ -150,7 +150,10 @@ function doGet(e) {
     var adminSS = getAdminSpreadsheet();
     var userSS = getSpreadsheet(spreadsheetId);
     
-    if (action === "getUsers") {
+    if (action === "initialize") {
+      initializeAdminSpreadsheet();
+      return jsonResponse({ success: true, message: "Admin database initialized successfully." });
+    } else if (action === "getUsers") {
       var usersSheet = adminSS.getSheetByName("users");
       var users = getSheetData(usersSheet);
       // Remove password hash from response
@@ -528,14 +531,25 @@ function doPost(e) {
     var adminSS = getAdminSpreadsheet();
     var userSS = getSpreadsheet(spreadsheetId);
     
-    if (action === "login") {
+    if (action === "initialize") {
+      initializeAdminSpreadsheet();
+      return jsonResponse({ success: true, message: "Admin database initialized successfully." });
+    } else if (action === "login") {
       var email = postData.email;
       var password = postData.password;
       
       var usersSheet = adminSS.getSheetByName("users");
+      if (!usersSheet || usersSheet.getLastRow() <= 1) {
+        initializeAdminSpreadsheet();
+        usersSheet = adminSS.getSheetByName("users");
+      }
+      
       var users = getSheetData(usersSheet);
       
-      var user = users.find(function(u) { return u.email === email || u.mobile === email; });
+      var user = users.find(function(u) {
+        var emailVal = u.email !== undefined ? u.email : u.emial;
+        return emailVal === email || u.mobile === email;
+      });
       if (!user) return jsonResponse({ success: false, error: "User not found" });
       
       if (!user.active || String(user.active) === "false") {
@@ -929,9 +943,10 @@ function initializeAdminSpreadsheet() {
   var usersSheet = ss.getSheetByName("users");
   if (!usersSheet) {
     usersSheet = ss.insertSheet("users");
-    usersSheet.appendRow(["id", "name", "mobile", "email", "password_hash", "role", "active", "spreadsheet_id", "created_at"]);
-    usersSheet.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#d9ead3");
   }
+  // Enforce correct headers (self-healing for typos like 'emial')
+  usersSheet.getRange(1, 1, 1, 9).setValues([["id", "name", "mobile", "email", "password_hash", "role", "active", "spreadsheet_id", "created_at"]]);
+  usersSheet.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#d9ead3");
   
   // Safely insert admin if users sheet is empty or only has headers
   if (usersSheet.getLastRow() <= 1) {
@@ -952,17 +967,18 @@ function initializeAdminSpreadsheet() {
   var logsSheet = ss.getSheetByName("audit_logs");
   if (!logsSheet) {
     logsSheet = ss.insertSheet("audit_logs");
-    logsSheet.appendRow(["log_id", "user_id", "user_name", "action", "details", "ip_address", "created_at"]);
-    logsSheet.getRange(1, 1, 1, 7).setFontWeight("bold").setBackground("#f3ecf9");
   }
+  logsSheet.getRange(1, 1, 1, 7).setValues([["log_id", "user_id", "user_name", "action", "details", "ip_address", "created_at"]]);
+  logsSheet.getRange(1, 1, 1, 7).setFontWeight("bold").setBackground("#f3ecf9");
   
   var settingsSheet = ss.getSheetByName("settings");
   if (!settingsSheet) {
     settingsSheet = ss.insertSheet("settings");
-    settingsSheet.appendRow(["key", "value"]);
-    settingsSheet.getRange(1, 1, 1, 2).setFontWeight("bold").setBackground("#fff2cc");
-    
-    // Add default settings
+  }
+  settingsSheet.getRange(1, 1, 1, 2).setValues([["key", "value"]]);
+  settingsSheet.getRange(1, 1, 1, 2).setFontWeight("bold").setBackground("#fff2cc");
+  
+  if (settingsSheet.getLastRow() <= 1) {
     settingsSheet.appendRow(["template_spreadsheet_id", ""]);
   }
 }

@@ -1,0 +1,8 @@
+{
+  "name": "thread-track-static",
+  "version": "1.0.0",
+  "description": "Static HTML/Bootstrap frontend for Thread Track",
+  "scripts": {
+    "dev": "npx http-server -p 8000"
+  }
+}
