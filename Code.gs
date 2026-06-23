@@ -7,6 +7,9 @@
 
 // Simple SHA-256 function for password hashing
 function sha256(input) {
+  if (!input) {
+    throw new Error("Do not run the 'sha256' function directly. Select 'initializeAdminSpreadsheet' from the dropdown at the top of the Apps Script editor, then click 'Run' to initialize the database tables.");
+  }
   var rawHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, input, Utilities.Charset.UTF_8);
   var output = '';
   for (var i = 0; i < rawHash.length; i++) {
