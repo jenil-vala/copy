@@ -103,6 +103,9 @@ function jsonResponse(data) {
 
 // Ensure the sheets exist inside a spreadsheet (checks and creates them if needed)
 function initializeUserSpreadsheet(ss) {
+  if (!ss) {
+    throw new Error("Do not run the 'initializeUserSpreadsheet' function directly. Select 'initializeAdminSpreadsheet' from the dropdown at the top of the Apps Script editor, then click 'Run' to initialize the database tables.");
+  }
   var sheetsNeeded = {
     "vendors": ["vendor_id", "vendor_name", "vendor_type", "mobile", "address", "gst_number", "notes", "created_at"],
     "sarees": ["saree_id", "lot_number", "design_name", "quantity", "current_stage", "current_vendor_id", "status", "remarks", "created_at"],
