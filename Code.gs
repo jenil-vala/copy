@@ -112,6 +112,44 @@ function appendRow(sheet, rowObj) {
   sheet.appendRow(newRow);
 }
 
+// Read data with caching (V8 user cache)
+function getSheetDataCached(spreadsheetId, sheetName, sheet, bypassCache) {
+  var cache = CacheService.getUserCache();
+  var cacheKey = (spreadsheetId || "admin") + "_" + sheetName;
+  if (!bypassCache) {
+    try {
+      var cachedData = cache.get(cacheKey);
+      if (cachedData) {
+        return JSON.parse(cachedData);
+      }
+    } catch (e) {
+      Logger.log("Cache read error: " + e.message);
+    }
+  }
+  
+  var data = getSheetData(sheet);
+  
+  try {
+    // Cache for 10 minutes (600 seconds)
+    cache.put(cacheKey, JSON.stringify(data), 600);
+  } catch (e) {
+    Logger.log("Cache write error: " + e.message);
+  }
+  return data;
+}
+
+// Invalidate cache for a sheet
+function invalidateCache(spreadsheetId, sheetName) {
+  var cache = CacheService.getUserCache();
+  var cacheKey = (spreadsheetId || "admin") + "_" + sheetName;
+  try {
+    cache.remove(cacheKey);
+  } catch (e) {
+    Logger.log("Cache remove error: " + e.message);
+  }
+}
+
+
 // Get standard response with CORS support
 function jsonResponse(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
@@ -147,17 +185,22 @@ function doGet(e) {
   try {
     var action = e.parameter.action;
     var spreadsheetId = e.parameter.spreadsheetId;
+    var bypassCache = e.parameter.bypassCache === "true";
     
     var adminSS;
     var userSS;
     
     if (action === "initialize") {
       initializeAdminSpreadsheet();
+      // Clear cache on manual initialize
+      invalidateCache(null, "users");
+      invalidateCache(null, "audit_logs");
+      invalidateCache(null, "settings");
       return jsonResponse({ success: true, message: "Admin database initialized successfully." });
     } else if (action === "getUsers") {
       adminSS = getAdminSpreadsheet();
       var usersSheet = adminSS.getSheetByName("users");
-      var users = getSheetData(usersSheet);
+      var users = getSheetDataCached(null, "users", usersSheet, bypassCache);
       // Remove password hash from response
       users.forEach(function(u) { delete u.password_hash; });
       return jsonResponse({ success: true, users: users });
@@ -165,7 +208,7 @@ function doGet(e) {
     } else if (action === "getAuditLogs") {
       adminSS = getAdminSpreadsheet();
       var logsSheet = adminSS.getSheetByName("audit_logs");
-      var logs = getSheetData(logsSheet);
+      var logs = getSheetDataCached(null, "audit_logs", logsSheet, bypassCache);
       // Return newest first
       logs.reverse();
       return jsonResponse({ success: true, logs: logs.slice(0, 200) });
@@ -174,7 +217,7 @@ function doGet(e) {
       userSS = getSpreadsheet(spreadsheetId);
       var type = e.parameter.type;
       var vendorsSheet = userSS.getSheetByName("vendors");
-      var vendors = getSheetData(vendorsSheet);
+      var vendors = getSheetDataCached(spreadsheetId, "vendors", vendorsSheet, bypassCache);
       if (type) {
         vendors = vendors.filter(function(v) { return v.vendor_type === type; });
       }
@@ -189,8 +232,8 @@ function doGet(e) {
       var sareesSheet = userSS.getSheetByName("sarees");
       var vendorsSheet = userSS.getSheetByName("vendors");
       
-      var sarees = getSheetData(sareesSheet);
-      var vendors = getSheetData(vendorsSheet);
+      var sarees = getSheetDataCached(spreadsheetId, "sarees", sareesSheet, bypassCache);
+      var vendors = getSheetDataCached(spreadsheetId, "vendors", vendorsSheet, bypassCache);
       
       // Build vendor lookup
       var vendorMap = {};
@@ -217,7 +260,7 @@ function doGet(e) {
     } else if (action === "getNextLot") {
       userSS = getSpreadsheet(spreadsheetId);
       var sareesSheet = userSS.getSheetByName("sarees");
-      var sarees = getSheetData(sareesSheet);
+      var sarees = getSheetDataCached(spreadsheetId, "sarees", sareesSheet, bypassCache);
       var maxLot = 1000; // default start
       sarees.forEach(function(s) {
         var lot = parseInt(s.lot_number);
@@ -232,9 +275,9 @@ function doGet(e) {
       var historySheet = userSS.getSheetByName("workflow_history");
       var vendorsSheet = userSS.getSheetByName("vendors");
       
-      var sarees = getSheetData(sareesSheet);
-      var history = getSheetData(historySheet);
-      var vendors = getSheetData(vendorsSheet);
+      var sarees = getSheetDataCached(spreadsheetId, "sarees", sareesSheet, bypassCache);
+      var history = getSheetDataCached(spreadsheetId, "workflow_history", historySheet, bypassCache);
+      var vendors = getSheetDataCached(spreadsheetId, "vendors", vendorsSheet, bypassCache);
       
       var saree = sarees.find(function(s) { return String(s.saree_id) === String(sareeId); });
       if (!saree) {
@@ -264,9 +307,9 @@ function doGet(e) {
       var historySheet = userSS.getSheetByName("workflow_history");
       var paymentsSheet = userSS.getSheetByName("payments");
       
-      var vendors = getSheetData(vendorsSheet);
-      var history = getSheetData(historySheet);
-      var payments = getSheetData(paymentsSheet);
+      var vendors = getSheetDataCached(spreadsheetId, "vendors", vendorsSheet, bypassCache);
+      var history = getSheetDataCached(spreadsheetId, "workflow_history", historySheet, bypassCache);
+      var payments = getSheetDataCached(spreadsheetId, "payments", paymentsSheet, bypassCache);
       
       // Calculate work values (only where received_date is completed)
       var workMap = {};
@@ -317,13 +360,13 @@ function doGet(e) {
       var paymentsSheet = userSS.getSheetByName("payments");
       var sareesSheet = userSS.getSheetByName("sarees");
       
-      var vendors = getSheetData(vendorsSheet);
+      var vendors = getSheetDataCached(spreadsheetId, "vendors", vendorsSheet, bypassCache);
       var vendor = vendors.find(function(v) { return String(v.vendor_id) === String(vendorId); });
       if (!vendor) return jsonResponse({ success: false, error: "Vendor not found" });
       
-      var history = getSheetData(historySheet).filter(function(h) { return String(h.vendor_id) === String(vendorId) && h.received_date; });
-      var payments = getSheetData(paymentsSheet).filter(function(p) { return String(p.vendor_id) === String(vendorId); });
-      var sarees = getSheetData(sareesSheet);
+      var history = getSheetDataCached(spreadsheetId, "workflow_history", historySheet, bypassCache).filter(function(h) { return String(h.vendor_id) === String(vendorId) && h.received_date; });
+      var payments = getSheetDataCached(spreadsheetId, "payments", paymentsSheet, bypassCache).filter(function(p) { return String(p.vendor_id) === String(vendorId); });
+      var sarees = getSheetDataCached(spreadsheetId, "sarees", sareesSheet, bypassCache);
       
       var sareeMap = {};
       sarees.forEach(function(s) { sareeMap[s.saree_id] = s; });
@@ -390,8 +433,8 @@ function doGet(e) {
       userSS = getSpreadsheet(spreadsheetId);
       var paymentsSheet = userSS.getSheetByName("payments");
       var vendorsSheet = userSS.getSheetByName("vendors");
-      var payments = getSheetData(paymentsSheet);
-      var vendors = getSheetData(vendorsSheet);
+      var payments = getSheetDataCached(spreadsheetId, "payments", paymentsSheet, bypassCache);
+      var vendors = getSheetDataCached(spreadsheetId, "vendors", vendorsSheet, bypassCache);
       
       var vendorMap = {};
       vendors.forEach(function(v) { vendorMap[v.vendor_id] = v; });
@@ -412,10 +455,10 @@ function doGet(e) {
       var historySheet = userSS.getSheetByName("workflow_history");
       var paymentsSheet = userSS.getSheetByName("payments");
       
-      var sarees = getSheetData(sareesSheet);
-      var vendors = getSheetData(vendorsSheet);
-      var history = getSheetData(historySheet);
-      var payments = getSheetData(paymentsSheet);
+      var sarees = getSheetDataCached(spreadsheetId, "sarees", sareesSheet, bypassCache);
+      var vendors = getSheetDataCached(spreadsheetId, "vendors", vendorsSheet, bypassCache);
+      var history = getSheetDataCached(spreadsheetId, "workflow_history", historySheet, bypassCache);
+      var payments = getSheetDataCached(spreadsheetId, "payments", paymentsSheet, bypassCache);
       
       // Calculate pipeline stats
       var pipeline = {
@@ -464,7 +507,7 @@ function doGet(e) {
       
       if (reportType === "outstanding") {
         // Output outstanding liabilities
-        var hisabRes = doGet({ parameter: { action: "getHisab", spreadsheetId: spreadsheetId } });
+        var hisabRes = doGet({ parameter: { action: "getHisab", spreadsheetId: spreadsheetId, bypassCache: String(bypassCache) } });
         var hisab = JSON.parse(hisabRes.getContent()).hisab;
         
         if (filterVendor && filterVendor !== "All") {
@@ -480,8 +523,8 @@ function doGet(e) {
       } else if (reportType === "production") {
         var sareesSheet = userSS.getSheetByName("sarees");
         var vendorsSheet = userSS.getSheetByName("vendors");
-        var sarees = getSheetData(sareesSheet);
-        var vendors = getSheetData(vendorsSheet);
+        var sarees = getSheetDataCached(spreadsheetId, "sarees", sareesSheet, bypassCache);
+        var vendors = getSheetDataCached(spreadsheetId, "vendors", vendorsSheet, bypassCache);
         var vendorMap = {};
         vendors.forEach(function(v) { vendorMap[v.vendor_id] = v; });
         
@@ -506,7 +549,7 @@ function doGet(e) {
         return jsonResponse({ success: true, production: sarees });
         
       } else if (reportType === "payments") {
-        var paymentsRes = doGet({ parameter: { action: "getPayments", spreadsheetId: spreadsheetId } });
+        var paymentsRes = doGet({ parameter: { action: "getPayments", spreadsheetId: spreadsheetId, bypassCache: String(bypassCache) } });
         var payments = JSON.parse(paymentsRes.getContent()).payments;
         
         if (filterVendor && filterVendor !== "All") {
@@ -660,6 +703,7 @@ function doPost(e) {
         created_at: new Date().toISOString()
       });
       
+      invalidateCache(null, "users");
       return jsonResponse({ success: true, message: "User created successfully", user: newUser });
       
     } else if (action === "updateUser") {
@@ -691,6 +735,7 @@ function doPost(e) {
         created_at: new Date().toISOString()
       });
       
+      invalidateCache(null, "users");
       return jsonResponse({ success: true, message: "User updated successfully" });
       
     } else if (action === "addVendor") {
@@ -711,6 +756,7 @@ function doPost(e) {
       };
       
       appendRow(vendorsSheet, newVendor);
+      invalidateCache(spreadsheetId, "vendors");
       return jsonResponse({ success: true, vendor: newVendor });
       
     } else if (action === "updateVendor") {
@@ -730,6 +776,7 @@ function doPost(e) {
       vendors[idx].notes = postData.notes || "";
       
       writeSheetData(vendorsSheet, vendors, ["vendor_id", "vendor_name", "vendor_type", "mobile", "address", "gst_number", "notes", "created_at"]);
+      invalidateCache(spreadsheetId, "vendors");
       return jsonResponse({ success: true, message: "Vendor updated" });
       
     } else if (action === "deleteVendor") {
@@ -740,6 +787,7 @@ function doPost(e) {
       
       var filtered = vendors.filter(function(v) { return String(v.vendor_id) !== String(vendorId); });
       writeSheetData(vendorsSheet, filtered, ["vendor_id", "vendor_name", "vendor_type", "mobile", "address", "gst_number", "notes", "created_at"]);
+      invalidateCache(spreadsheetId, "vendors");
       return jsonResponse({ success: true, message: "Vendor deleted" });
       
     } else if (action === "addSaree") {
@@ -766,6 +814,7 @@ function doPost(e) {
       };
       
       appendRow(sareesSheet, newSaree);
+      invalidateCache(spreadsheetId, "sarees");
       return jsonResponse({ success: true, saree: newSaree });
       
     } else if (action === "sendSareeToStage") {
@@ -806,6 +855,8 @@ function doPost(e) {
       };
       
       appendRow(historySheet, newHistory);
+      invalidateCache(spreadsheetId, "sarees");
+      invalidateCache(spreadsheetId, "workflow_history");
       return jsonResponse({ success: true, message: "Saree sent to stage " + stageName });
       
     } else if (action === "receiveSareeFromStage") {
@@ -853,6 +904,8 @@ function doPost(e) {
       }
       
       writeSheetData(sareesSheet, sarees, ["saree_id", "lot_number", "design_name", "quantity", "current_stage", "current_vendor_id", "status", "remarks", "created_at"]);
+      invalidateCache(spreadsheetId, "sarees");
+      invalidateCache(spreadsheetId, "workflow_history");
       return jsonResponse({ success: true, message: "Saree received from stage successfully" });
       
     } else if (action === "rollbackSareeStage") {
@@ -904,6 +957,8 @@ function doPost(e) {
       }
       
       writeSheetData(sareesSheet, sarees, ["saree_id", "lot_number", "design_name", "quantity", "current_stage", "current_vendor_id", "status", "remarks", "created_at"]);
+      invalidateCache(spreadsheetId, "sarees");
+      invalidateCache(spreadsheetId, "workflow_history");
       return jsonResponse({ success: true, message: "Workflow rolled back successfully" });
       
     } else if (action === "deleteSaree") {
@@ -921,6 +976,8 @@ function doPost(e) {
       var filteredHistory = history.filter(function(h) { return String(h.saree_id) !== String(sareeId); });
       writeSheetData(historySheet, filteredHistory, ["history_id", "saree_id", "stage_name", "vendor_id", "sent_date", "received_date", "work_cost", "remarks", "updated_by", "created_at"]);
       
+      invalidateCache(spreadsheetId, "sarees");
+      invalidateCache(spreadsheetId, "workflow_history");
       return jsonResponse({ success: true, message: "Saree lot and history deleted" });
       
     } else if (action === "addPayment") {
@@ -941,6 +998,7 @@ function doPost(e) {
       };
       
       appendRow(paymentsSheet, newPayment);
+      invalidateCache(spreadsheetId, "payments");
       return jsonResponse({ success: true, payment: newPayment });
       
     } else if (action === "deletePayment") {
@@ -951,6 +1009,7 @@ function doPost(e) {
       
       var filtered = payments.filter(function(p) { return String(p.payment_id) !== String(paymentId); });
       writeSheetData(paymentsSheet, filtered, ["payment_id", "vendor_id", "payment_date", "amount", "payment_method", "remarks", "created_by", "created_at"]);
+      invalidateCache(spreadsheetId, "payments");
       return jsonResponse({ success: true, message: "Payment deleted" });
     }
     
