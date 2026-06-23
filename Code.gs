@@ -5,6 +5,11 @@
  * from/to individual user spreadsheets.
  */
 
+// RUN THIS FUNCTION in the dropdown to set up your database!
+function runThisToInitializeDatabase() {
+  initializeAdminSpreadsheet();
+}
+
 // Simple SHA-256 function for password hashing
 function sha256(input) {
   if (!input) {
