@@ -29,7 +29,7 @@ function sha256(input) {
 
 // OPTIONAL: If your script is a standalone script (created directly in Google Drive), 
 // paste your central Admin Spreadsheet ID below. Otherwise, keep it blank if container-bound.
-var ADMIN_SPREADSHEET_ID = "";
+var ADMIN_SPREADSHEET_ID = "1uxzRfaIxS3lLcnJD5C773kbUAvNK7Hl_T6K-saLuGwQ";
 
 // Open and verify the Admin Spreadsheet (throws structured warning if script is unbound)
 function getAdminSpreadsheet() {
