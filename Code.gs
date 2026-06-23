@@ -27,14 +27,25 @@ function sha256(input) {
   return output;
 }
 
+// OPTIONAL: If your script is a standalone script (created directly in Google Drive), 
+// paste your central Admin Spreadsheet ID below. Otherwise, keep it blank if container-bound.
+const ADMIN_SPREADSHEET_ID = "";
+
 // Open and verify the Admin Spreadsheet (throws structured warning if script is unbound)
 function getAdminSpreadsheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) {
+    if (ADMIN_SPREADSHEET_ID && ADMIN_SPREADSHEET_ID !== "") {
+      try {
+        return SpreadsheetApp.openById(ADMIN_SPREADSHEET_ID);
+      } catch (e) {
+        throw new Error("Could not open spreadsheet by ADMIN_SPREADSHEET_ID: " + e.message);
+      }
+    }
     throw new Error("This Google Apps Script is not bound to a Google Spreadsheet. " +
                      "Please make sure you create this script by opening your central 'Thread Track Admin DB' Google Sheet, " +
                      "and clicking 'Extensions' -> 'Apps Script' on the top menu bar, then pasting the code there. " +
-                     "If you created a standalone script, it will not be able to find the active sheet!");
+                     "If you created a standalone script, please configure ADMIN_SPREADSHEET_ID at the top of Code.gs!");
   }
   return ss;
 }
@@ -132,13 +143,13 @@ function initializeUserSpreadsheet(ss) {
 
 // GET handler
 function doGet(e) {
-  var action = e.parameter.action;
-  var spreadsheetId = e.parameter.spreadsheetId;
-  
-  var adminSS = getAdminSpreadsheet();
-  var userSS = getSpreadsheet(spreadsheetId);
-  
   try {
+    var action = e.parameter.action;
+    var spreadsheetId = e.parameter.spreadsheetId;
+    
+    var adminSS = getAdminSpreadsheet();
+    var userSS = getSpreadsheet(spreadsheetId);
+    
     if (action === "getUsers") {
       var usersSheet = adminSS.getSheetByName("users");
       var users = getSheetData(usersSheet);
@@ -509,14 +520,14 @@ function doGet(e) {
 
 // POST handler (handles writes, creates, updates, and deletes)
 function doPost(e) {
-  var postData = JSON.parse(e.postData.contents);
-  var action = postData.action;
-  var spreadsheetId = postData.spreadsheetId;
-  
-  var adminSS = getAdminSpreadsheet();
-  var userSS = getSpreadsheet(spreadsheetId);
-  
   try {
+    var postData = JSON.parse(e.postData.contents);
+    var action = postData.action;
+    var spreadsheetId = postData.spreadsheetId;
+    
+    var adminSS = getAdminSpreadsheet();
+    var userSS = getSpreadsheet(spreadsheetId);
+    
     if (action === "login") {
       var email = postData.email;
       var password = postData.password;
