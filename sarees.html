@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saree Lot Tracking - Thread Track</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Google Fonts: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Custom Stylesheet -->
+  <link href="style.css" rel="stylesheet">
+</head>
+<body>
+  <!-- Navbar Placeholder -->
+  <div id="navbar-placeholder"></div>
+
+  <div class="container main-container">
+    <!-- Alert Container -->
+    <div id="alert-container"></div>
+
+    <!-- Header Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+      <div>
+        <h1 class="fw-black text-slate-800 tracking-tight m-0">Saree Lots</h1>
+        <p class="text-muted mt-1 m-0">Track and advance manufacturing stages</p>
+      </div>
+      <div>
+        <button class="btn btn-primary-custom d-inline-flex align-items-center gap-2 shadow-sm" id="btn-add-lot">
+          <i class="bi bi-plus-circle-fill"></i>
+          <span>Add Saree Lot</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="card-custom mb-4">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label font-semibold text-muted text-xs uppercase">Search Lot or Design</label>
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" class="form-control border-start-0 ps-0" id="filter-search" placeholder="Search lot number or design...">
+          </div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label font-semibold text-muted text-xs uppercase">Filter by Stage</label>
+          <select class="form-select" id="filter-stage">
+            <option value="All">All Stages</option>
+            <option value="Dyed">Dyed</option>
+            <option value="Embroidery">Embroidery</option>
+            <option value="Stitching">Stitching</option>
+            <option value="Diamond">Diamond</option>
+            <option value="Folding">Folding</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label font-semibold text-muted text-xs uppercase">Filter by Status</label>
+          <select class="form-select" id="filter-status">
+            <option value="All">All Statuses</option>
+            <option value="In Process">In Process</option>
+            <option value="Completed">Completed</option>
+            <option value="Hold">Hold</option>
+          </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+          <button class="btn btn-light border w-100 fw-bold" id="btn-reset-filters" style="border-radius: var(--radius-sm);">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="border border-slate-100 rounded-xl overflow-hidden shadow-sm bg-white" style="border-radius: var(--radius-md);">
+      <div class="table-responsive">
+        <table class="table table-custom table-hover">
+          <thead>
+            <tr>
+              <th>Lot No</th>
+              <th>Design Name</th>
+              <th>Quantity</th>
+              <th>Current Stage</th>
+              <th>Location / Vendor</th>
+              <th>Status</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="sarees-table-body">
+            <tr>
+              <td colspan="7" class="text-center py-5 text-muted font-medium">
+                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                Loading Saree Lots...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALS -->
+
+  <!-- Add Saree Lot Modal -->
+  <div class="modal fade" id="addLotModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content modal-content-custom">
+        <div class="modal-header modal-header-custom">
+          <h5 class="modal-title fw-bold">Add Saree Lot</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="add-lot-form">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="lot-number" class="form-label fw-bold">Lot Number</label>
+              <input type="number" class="form-control" id="lot-number" required readonly>
+              <div class="form-text">Lot number is generated automatically.</div>
+            </div>
+            <div class="mb-3">
+              <label for="design-name" class="form-label fw-bold">Design Name</label>
+              <input type="text" class="form-control" id="design-name" placeholder="e.g. Silk Zari Border" required>
+            </div>
+            <div class="mb-3">
+              <label for="quantity" class="form-label fw-bold">Quantity (pieces)</label>
+              <input type="number" class="form-control" id="quantity" min="1" placeholder="e.g. 100" required>
+            </div>
+            <div class="mb-3">
+              <label for="remarks" class="form-label fw-bold">Remarks</label>
+              <textarea class="form-control" id="remarks" rows="3" placeholder="Additional details..."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer modal-footer-custom">
+            <button type="button" class="btn btn-light border fw-bold" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary-custom">Save Saree Lot</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Saree Lot Tracking Details & History Modal -->
+  <div class="modal fade" id="sareeDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content modal-content-custom">
+        <div class="modal-header modal-header-custom">
+          <h5 class="modal-title fw-bold" id="details-modal-title">Lot Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Saree Lot Summary -->
+          <div class="row g-3 mb-4 p-3 bg-light rounded" style="border-radius: var(--radius-sm);">
+            <div class="col-6 col-sm-3">
+              <span class="text-xs text-muted font-semibold uppercase d-block">Design</span>
+              <strong id="detail-design" class="text-slate-800">-</strong>
+            </div>
+            <div class="col-6 col-sm-3">
+              <span class="text-xs text-muted font-semibold uppercase d-block">Total Qty</span>
+              <strong id="detail-qty" class="text-slate-800">- pcs</strong>
+            </div>
+            <div class="col-6 col-sm-3">
+              <span class="text-xs text-muted font-semibold uppercase d-block">Stage</span>
+              <span class="badge border" id="detail-stage">-</span>
+            </div>
+            <div class="col-6 col-sm-3">
+              <span class="text-xs text-muted font-semibold uppercase d-block">Status</span>
+              <span id="detail-status">-</span>
+            </div>
+          </div>
+
+          <!-- Workflow Operations -->
+          <div class="card p-3 mb-4 border border-dashed" id="workflow-action-box" style="border-radius: var(--radius-sm);">
+            <!-- Dynamic Actions (Send to stage, receive from stage, rollback) are loaded here -->
+          </div>
+
+          <!-- History Timeline -->
+          <h6 class="fw-bold mb-3 text-slate-800">Workflow Timeline</h6>
+          <div class="timeline" id="timeline-container">
+            <!-- Timeline elements are injected here -->
+          </div>
+        </div>
+        <div class="modal-footer modal-footer-custom justify-content-between">
+          <button type="button" class="btn btn-outline-danger fw-bold d-flex align-items-center gap-1.5" id="btn-delete-saree">
+            <i class="bi bi-trash-fill"></i> Delete Lot
+          </button>
+          <button type="button" class="btn btn-light border fw-bold" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Send Saree To Stage Modal -->
+  <div class="modal fade" id="sendSareeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content modal-content-custom">
+        <div class="modal-header modal-header-custom">
+          <h5 class="modal-title fw-bold" id="send-modal-title">Send to Next Stage</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="send-saree-form">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="send-stage" class="form-label fw-bold">Select Stage</label>
+              <select class="form-select" id="send-stage" required>
+                <option value="Dyed">Dyed</option>
+                <option value="Embroidery">Embroidery</option>
+                <option value="Stitching">Stitching</option>
+                <option value="Diamond">Diamond</option>
+                <option value="Folding">Folding</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="send-vendor" class="form-label fw-bold">Select Vendor</label>
+              <select class="form-select" id="send-vendor" required>
+                <option value="">-- Choose Vendor --</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="send-cost" class="form-label fw-bold">Estimated Work Cost (per piece)</label>
+              <div class="input-group">
+                <span class="input-group-text">₹</span>
+                <input type="number" step="0.01" min="0" class="form-control" id="send-cost" placeholder="0.00" required>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="send-remarks" class="form-label fw-bold">Remarks</label>
+              <textarea class="form-control" id="send-remarks" rows="2"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer modal-footer-custom">
+            <button type="button" class="btn btn-light border fw-bold" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary-custom">Send Lot</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Receive Saree From Stage Modal -->
+  <div class="modal fade" id="receiveSareeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content modal-content-custom">
+        <div class="modal-header modal-header-custom">
+          <h5 class="modal-title fw-bold">Receive from Stage</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="receive-saree-form">
+          <div class="modal-body">
+            <p>You are receiving this lot back into the workshop.</p>
+            <div class="mb-3">
+              <label for="receive-cost" class="form-label fw-bold">Final Total Work Cost (Rs.)</label>
+              <div class="input-group">
+                <span class="input-group-text">₹</span>
+                <input type="number" step="0.01" min="0" class="form-control" id="receive-cost" required>
+              </div>
+              <div class="form-text text-muted" id="receive-estimated-cost-text">Estimated cost: ₹0.00</div>
+            </div>
+            <div class="mb-3">
+              <label for="receive-remarks" class="form-label fw-bold">Remarks</label>
+              <textarea class="form-control" id="receive-remarks" rows="2"></textarea>
+            </div>
+            <div class="form-check form-switch mb-3">
+              <input class="form-check-input" type="checkbox" id="receive-completed">
+              <label class="form-check-label fw-bold text-slate-800" for="receive-completed">
+                Mark as Fully Completed Lot
+              </label>
+              <div class="form-text">Check this if the manufacturing process for this lot is completely finished.</div>
+            </div>
+          </div>
+          <div class="modal-footer modal-footer-custom">
+            <button type="button" class="btn btn-light border fw-bold" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-success fw-bold text-white px-4 py-2" style="border-radius: var(--radius-sm);">Receive Lot</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- jsPDF & AutoTable via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+  <!-- Config and Common Script -->
+  <script src="config.js"></script>
+  <script src="common.js"></script>
+
+  <script>
+    let sareesList = [];
+    let selectedSaree = null;
+    let selectedSareeHistory = [];
+    let vendorsList = [];
+
+    // Check query parameters on load
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlStage = urlParams.get('filterStage');
+    const autoOpenModal = urlParams.get('openModal');
+
+    function getStageBadgeClass(stage) {
+      const colors = {
+        Dyed: 'bg-warning text-dark border-warning-subtle',
+        Embroidery: 'bg-purple text-purple border-purple-subtle',
+        Stitching: 'bg-primary text-primary border-primary-subtle',
+        Diamond: 'bg-info text-dark border-info-subtle',
+        Folding: 'bg-danger text-danger border-danger-subtle',
+        Completed: 'bg-success text-success border-success-subtle'
+      };
+      return colors[stage] || 'bg-secondary text-white';
+    }
+
+    async function loadSarees() {
+      try {
+        const response = await callApi('getSarees');
+        sareesList = response.sarees;
+        renderSareesTable();
+      } catch (err) {
+        console.error(err);
+        $('#sarees-table-body').html(`
+          <tr>
+            <td colspan="7" class="text-center py-5 text-danger font-bold">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i> Failed to retrieve sarees database.
+            </td>
+          </tr>
+        `);
+      }
+    }
+
+    async function loadVendors() {
+      try {
+        const res = await callApi('getVendors');
+        vendorsList = res.vendors;
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderSareesTable() {
+      const tableBody = $('#sarees-table-body');
+      tableBody.empty();
+
+      const searchVal = $('#filter-search').val().toLowerCase();
+      const stageVal = $('#filter-stage').val();
+      const statusVal = $('#filter-status').val();
+
+      let filtered = sareesList;
+
+      if (searchVal) {
+        filtered = filtered.filter(s => 
+          String(s.lot_number).includes(searchVal) || 
+          s.design_name.toLowerCase().includes(searchVal)
+        );
+      }
+
+      if (stageVal && stageVal !== 'All') {
+        filtered = filtered.filter(s => s.current_stage === stageVal);
+      }
+
+      if (statusVal && statusVal !== 'All') {
+        filtered = filtered.filter(s => s.status === statusVal);
+      }
+
+      if (filtered.length === 0) {
+        tableBody.html(`
+          <tr>
+            <td colspan="7" class="text-center py-5 text-muted font-medium">
+              No matching saree lots found.
+            </td>
+          </tr>
+        `);
+        return;
+      }
+
+      filtered.forEach(s => {
+        const badgeClass = getStageBadgeClass(s.current_stage);
+        
+        let statusBadge = '';
+        if (s.status === 'Completed') {
+          statusBadge = '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">Completed</span>';
+        } else if (s.status === 'Hold') {
+          statusBadge = '<span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle">Hold</span>';
+        } else {
+          statusBadge = '<span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle">In Process</span>';
+        }
+
+        const vendorDisplay = s.current_vendor_name 
+          ? `${s.current_vendor_name} <span class="text-xs text-muted font-normal">(${s.current_vendor_type})</span>`
+          : '<span class="text-muted italic">In Workshop</span>';
+
+        const rowHtml = `
+          <tr>
+            <td class="text-primary fw-bold">Lot #${s.lot_number}</td>
+            <td>${s.design_name}</td>
+            <td>${s.quantity} pcs</td>
+            <td>
+              <span class="badge border ${badgeClass}">${s.current_stage}</span>
+            </td>
+            <td>${vendorDisplay}</td>
+            <td>${statusBadge}</td>
+            <td class="text-end whitespace-nowrap">
+              <button class="btn btn-sm btn-light border fw-bold d-inline-flex align-items-center gap-1.5" onclick="openDetailsModal(${s.saree_id})">
+                <i class="bi bi-sliders"></i> Track
+              </button>
+            </td>
+          </tr>
+        `;
+        tableBody.append(rowHtml);
+      });
+    }
+
+    async function openDetailsModal(sareeId) {
+      try {
+        const res = await callApi('getSareeDetails', { sareeId: sareeId });
+        selectedSaree = res.saree;
+        selectedSareeHistory = res.history;
+
+        // Populate Modal Fields
+        $('#details-modal-title').text(`Lot Details: #${selectedSaree.lot_number}`);
+        $('#detail-design').text(selectedSaree.design_name);
+        $('#detail-qty').text(`${selectedSaree.quantity} pcs`);
+        $('#detail-stage').text(selectedSaree.current_stage).attr('class', `badge border ${getStageBadgeClass(selectedSaree.current_stage)}`);
+        
+        let statusBadge = '';
+        if (selectedSaree.status === 'Completed') {
+          statusBadge = '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">Completed</span>';
+        } else if (selectedSaree.status === 'Hold') {
+          statusBadge = '<span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle">Hold</span>';
+        } else {
+          statusBadge = '<span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle">In Process</span>';
+        }
+        $('#detail-status').html(statusBadge);
+
+        // Populate Action Panel
+        renderActionBox();
+
+        // Populate Timeline History
+        renderTimeline();
+
+        // Show Modal
+        const modal = new bootstrap.Modal(document.getElementById('sareeDetailsModal'));
+        modal.show();
+      } catch(err) {
+        console.error(err);
+      }
+    }
+
+    function renderActionBox() {
+      const box = $('#workflow-action-box');
+      box.empty();
+
+      if (selectedSaree.status === 'Completed') {
+        box.html(`
+          <div class="d-flex align-items-center gap-2 text-success fw-bold">
+            <i class="bi bi-check-circle-fill fs-5"></i>
+            <span>Manufacturing Process Completed! This lot is ready.</span>
+          </div>
+        `);
+        return;
+      }
+
+      if (!selectedSaree.current_vendor_id) {
+        // Saree is currently In Workshop, display "Send to Stage" button
+        box.html(`
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+              <h6 class="fw-bold m-0 text-slate-800">Advance Workflow</h6>
+              <p class="text-xs text-muted m-0">Send this lot to a vendor for the next stage.</p>
+            </div>
+            <button class="btn btn-primary-custom fw-bold d-inline-flex align-items-center gap-1.5" onclick="openSendModal()">
+              <i class="bi bi-send-fill"></i> Send to Vendor
+            </button>
+          </div>
+        `);
+      } else {
+        // Saree is with a Vendor, display "Receive from Stage" button
+        box.html(`
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+              <h6 class="fw-bold m-0 text-slate-800">Job In Progress</h6>
+              <p class="text-xs text-muted m-0">Currently at vendor for stage: <strong>${selectedSaree.current_stage}</strong></p>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-success fw-bold text-white d-inline-flex align-items-center gap-1.5" onclick="openReceiveModal()" style="border-radius: var(--radius-sm);">
+                <i class="bi bi-box-arrow-in-down"></i> Receive Job
+              </button>
+            </div>
+          </div>
+        `);
+      }
+
+      // Add Rollback button if there is any history at all
+      if (selectedSareeHistory.length > 0) {
+        box.append(`
+          <div class="pt-3 border-top mt-3 d-flex justify-content-end">
+            <button class="btn btn-sm btn-outline-warning fw-bold d-inline-flex align-items-center gap-1.5" onclick="rollbackSareeWorkflow()">
+              <i class="bi bi-arrow-counterclockwise"></i> Rollback Last Action
+            </button>
+          </div>
+        `);
+      }
+    }
+
+    function renderTimeline() {
+      const container = $('#timeline-container');
+      container.empty();
+
+      if (selectedSareeHistory.length === 0) {
+        container.html('<p class="text-muted text-xs italic m-0">No transaction logs recorded yet.</p>');
+        return;
+      }
+
+      selectedSareeHistory.forEach(h => {
+        const isReceived = !!h.received_date;
+        const timelineItemClass = isReceived ? 'completed' : '';
+        const stageBadge = getStageBadgeClass(h.stage_name);
+        
+        let detailsHtml = '';
+        if (isReceived) {
+          detailsHtml = `
+            <div class="text-xs text-muted mt-1">
+              <span>Sent: ${formatDate(h.sent_date)}</span> | 
+              <span>Received: ${formatDate(h.received_date)}</span>
+            </div>
+            <div class="text-xs font-bold text-success mt-1">
+              Work Cost: ${formatCurrency(h.work_cost)} 
+              ${h.remarks ? ` | <span class="text-muted font-normal italic">Remarks: ${h.remarks}</span>` : ''}
+            </div>
+          `;
+        } else {
+          detailsHtml = `
+            <div class="text-xs text-muted mt-1">
+              <span>Sent: ${formatDate(h.sent_date)}</span> | 
+              <span class="text-danger fw-bold">PENDING RECEIVAL</span>
+            </div>
+            <div class="text-xs font-bold text-muted mt-1">
+              Estimated Rate: ${formatCurrency(h.work_cost)}
+              ${h.remarks ? ` | <span class="font-normal italic">Remarks: ${h.remarks}</span>` : ''}
+            </div>
+            <div class="mt-2">
+              <button class="btn btn-xs btn-outline-primary fw-bold" onclick="downloadJobSlipPDF(${h.history_id})" style="font-size: 0.7rem; padding: 2px 8px; border-radius: 4px;">
+                <i class="bi bi-download"></i> Download Job Slip
+              </button>
+            </div>
+          `;
+        }
+
+        const itemHtml = `
+          <div class="timeline-item ${timelineItemClass}">
+            <div class="d-flex justify-content-between align-items-start">
+              <h6 class="fw-bold m-0 text-slate-800">${h.vendor_name} <span class="badge border ${stageBadge} ms-1 text-xs" style="font-size: 0.65rem;">${h.stage_name}</span></h6>
+            </div>
+            ${detailsHtml}
+          </div>
+        `;
+        container.append(itemHtml);
+      });
+    }
+
+    // Advance to next stage forms
+    function openSendModal() {
+      // Determine next stage
+      const currentStage = selectedSaree.current_stage;
+      const stageSequence = ['Dyed', 'Embroidery', 'Stitching', 'Diamond', 'Folding'];
+      let nextStageIdx = stageSequence.indexOf(currentStage) + 1;
+      if (nextStageIdx >= stageSequence.length) nextStageIdx = 0; // fallback default
+      
+      const nextStage = stageSequence[nextStageIdx];
+      $('#send-stage').val(nextStage).trigger('change');
+      
+      // Close details modal, show send modal
+      bootstrap.Modal.getInstance(document.getElementById('sareeDetailsModal')).hide();
+      const sendModal = new bootstrap.Modal(document.getElementById('sendSareeModal'));
+      sendModal.show();
+    }
+
+    // Filter vendor dropdown by stage
+    $('#send-stage').on('change', function() {
+      const selectedStage = $(this).val();
+      const vendorSelect = $('#send-vendor');
+      vendorSelect.empty().append('<option value="">-- Choose Vendor --</option>');
+      
+      const filteredVendors = vendorsList.filter(v => v.vendor_type === selectedStage);
+      filteredVendors.forEach(v => {
+        vendorSelect.append(`<option value="${v.vendor_id}">${v.vendor_name}</option>`);
+      });
+    });
+
+    $('#send-saree-form').on('submit', async function(e) {
+      e.preventDefault();
+      
+      const payload = {
+        sareeId: selectedSaree.saree_id,
+        stage_name: $('#send-stage').val(),
+        vendor_id: $('#send-vendor').val(),
+        estimated_cost: parseFloat($('#send-cost').val()),
+        remarks: $('#send-remarks').val().trim(),
+        updatedBy: getSessionUser().name
+      };
+
+      try {
+        await callApi('sendSareeToStage', {}, true, payload);
+        bootstrap.Modal.getInstance(document.getElementById('sendSareeModal')).hide();
+        loadSarees();
+        showAlert(`Lot #${selectedSaree.lot_number} advanced successfully to ${payload.stage_name}.`, 'success');
+      } catch(err) {
+        console.error(err);
+      }
+    });
+
+    function openReceiveModal() {
+      // Set estimated default value
+      const activeJob = selectedSareeHistory.find(h => !h.received_date);
+      const estimatedCost = activeJob ? parseFloat(activeJob.work_cost || 0) : 0;
+      
+      // Calculate total work cost: qty * cost per piece
+      const totalEstimated = estimatedCost * parseInt(selectedSaree.quantity);
+      
+      $('#receive-cost').val(totalEstimated);
+      $('#receive-estimated-cost-text').text(`Estimated: ${formatCurrency(totalEstimated)} (${estimatedCost}/pc for ${selectedSaree.quantity} pcs)`);
+      $('#receive-remarks').val('');
+      $('#receive-completed').prop('checked', false);
+
+      // Close details modal, show receive modal
+      bootstrap.Modal.getInstance(document.getElementById('sareeDetailsModal')).hide();
+      const receiveModal = new bootstrap.Modal(document.getElementById('receiveSareeModal'));
+      receiveModal.show();
+    }
+
+    $('#receive-saree-form').on('submit', async function(e) {
+      e.preventDefault();
+      
+      const payload = {
+        sareeId: selectedSaree.saree_id,
+        work_cost: parseFloat($('#receive-cost').val()),
+        remarks: $('#receive-remarks').val().trim(),
+        isCompleted: $('#receive-completed').is(':checked')
+      };
+
+      try {
+        await callApi('receiveSareeFromStage', {}, true, payload);
+        bootstrap.Modal.getInstance(document.getElementById('receiveSareeModal')).hide();
+        loadSarees();
+        showAlert(`Lot #${selectedSaree.lot_number} received into workshop successfully.`, 'success');
+      } catch(err) {
+        console.error(err);
+      }
+    });
+
+    async function rollbackSareeWorkflow() {
+      if (!confirm(`Are you sure you want to rollback the last workflow action for Lot #${selectedSaree.lot_number}?`)) {
+        return;
+      }
+      try {
+        await callApi('rollbackSareeStage', {}, true, { sareeId: selectedSaree.saree_id });
+        bootstrap.Modal.getInstance(document.getElementById('sareeDetailsModal')).hide();
+        loadSarees();
+        showAlert('Workflow rolled back successfully.', 'warning');
+      } catch(err) {
+        console.error(err);
+      }
+    }
+
+    // Delete saree lot
+    $('#btn-delete-saree').on('click', async function() {
+      if (!confirm(`CAUTION: Are you sure you want to delete Lot #${selectedSaree.lot_number}? This will delete the lot and all its workflow records permanently!`)) {
+        return;
+      }
+      try {
+        await callApi('deleteSaree', {}, true, { sareeId: selectedSaree.saree_id });
+        bootstrap.Modal.getInstance(document.getElementById('sareeDetailsModal')).hide();
+        loadSarees();
+        showAlert('Saree lot deleted successfully.', 'danger');
+      } catch(err) {
+        console.error(err);
+      }
+    });
+
+    // Add saree lot form
+    $('#btn-add-lot').on('click', async function() {
+      try {
+        const res = await callApi('getNextLot');
+        $('#lot-number').val(res.nextLot);
+        $('#design-name').val('');
+        $('#quantity').val('');
+        $('#remarks').val('');
+
+        const modal = new bootstrap.Modal(document.getElementById('addLotModal'));
+        modal.show();
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    $('#add-lot-form').on('submit', async function(e) {
+      e.preventDefault();
+      
+      const payload = {
+        lot_number: parseInt($('#lot-number').val()),
+        design_name: $('#design-name').val().trim(),
+        quantity: parseInt($('#quantity').val()),
+        remarks: $('#remarks').val().trim()
+      };
+
+      try {
+        await callApi('addSaree', {}, true, payload);
+        bootstrap.Modal.getInstance(document.getElementById('addLotModal')).hide();
+        loadSarees();
+        showAlert(`Successfully registered Saree Lot #${payload.lot_number}.`, 'success');
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    // Client-side PDF Slip Generation
+    function downloadJobSlipPDF(historyId) {
+      const historyRecord = selectedSareeHistory.find(h => h.history_id == historyId);
+      if (!historyRecord) return;
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      // Title & Header
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(20);
+      doc.setTextColor(99, 102, 241); // indigo
+      doc.text("THREAD TRACK", 105, 20, { alignment: "center" });
+
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(100, 116, 139);
+      doc.text("Saree Manufacturing Management System", 105, 26, { alignment: "center" });
+      
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(14);
+      doc.setTextColor(30, 41, 59);
+      doc.text("JOB WORK SLIP", 105, 36, { alignment: "center" });
+
+      // Line Separator
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.5);
+      doc.line(15, 42, 195, 42);
+
+      // Metadata Block
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text("Vendor Details", 15, 50);
+      doc.setFont("Helvetica", "normal");
+      doc.text(`Name: ${historyRecord.vendor_name}`, 15, 56);
+      doc.text(`Type: ${historyRecord.vendor_type}`, 15, 62);
+      doc.text(`Mobile: ${historyRecord.mobile}`, 15, 68);
+
+      doc.setFont("Helvetica", "bold");
+      doc.text("Slip Information", 140, 50);
+      doc.setFont("Helvetica", "normal");
+      doc.text(`Slip No: JWS-${historyRecord.history_id}`, 140, 56);
+      doc.text(`Sent Date: ${formatDate(historyRecord.sent_date).split(' ')[0]}`, 140, 62);
+      doc.text("Status: PENDING WORK", 140, 68);
+
+      // Saree details Table
+      const headers = [["Lot Number", "Design Name", "Quantity", "Stage Name", "Est. Cost/pc"]];
+      const data = [[
+        selectedSaree.lot_number.toString(),
+        selectedSaree.design_name,
+        `${selectedSaree.quantity} pcs`,
+        historyRecord.stage_name,
+        `Rs. ${parseFloat(historyRecord.work_cost).toFixed(2)}`
+      ]];
+
+      doc.autoTable({
+        head: headers,
+        body: data,
+        startY: 78,
+        theme: 'striped',
+        headStyles: { fillColor: [99, 102, 241], fontStyle: 'bold' },
+        styles: { fontSize: 10, halign: 'center' }
+      });
+
+      // Signatures
+      const finalY = doc.lastAutoTable.finalY + 30;
+      doc.setFont("Helvetica", "normal");
+      doc.text("_________________________", 15, finalY);
+      doc.text("Manager Signature", 15, finalY + 6);
+
+      doc.text("_________________________", 140, finalY);
+      doc.text("Vendor Signature", 140, finalY + 6);
+
+      doc.save(`job_work_slip_${selectedSaree.lot_number}_${historyRecord.stage_name}.pdf`);
+    }
+
+    // Reset Filters
+    $('#btn-reset-filters').on('click', function() {
+      $('#filter-search').val('');
+      $('#filter-stage').val('All');
+      $('#filter-status').val('All');
+      renderSareesTable();
+    });
+
+    // Filter Change Event Triggers
+    $('#filter-search, #filter-stage, #filter-status').on('change keyup', renderSareesTable);
+
+    $(document).ready(async function() {
+      await loadVendors();
+      await loadSarees();
+
+      // Handle redirect filters
+      if (urlStage) {
+        $('#filter-stage').val(urlStage);
+        renderSareesTable();
+      }
+
+      if (autoOpenModal === 'true') {
+        $('#btn-add-lot').trigger('click');
+      }
+    });
+  </script>
+</body>
+</html>

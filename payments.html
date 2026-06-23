@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payments Log - Thread Track</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Google Fonts: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Custom Stylesheet -->
+  <link href="style.css" rel="stylesheet">
+</head>
+<body>
+  <!-- Navbar Placeholder -->
+  <div id="navbar-placeholder"></div>
+
+  <div class="container main-container">
+    <!-- Alert Container -->
+    <div id="alert-container"></div>
+
+    <div class="row g-4">
+      <!-- Record Payment Section -->
+      <div class="col-lg-4">
+        <div class="card-custom">
+          <h4 class="fw-bold mb-3 text-slate-800">Record Payment</h4>
+          <form id="payment-form">
+            <div class="mb-3">
+              <label for="payment-vendor" class="form-label fw-bold">Select Vendor</label>
+              <select class="form-select" id="payment-vendor" required>
+                <option value="">-- Choose Vendor --</option>
+              </select>
+            </div>
+            
+            <div class="mb-3">
+              <label for="payment-amount" class="form-label fw-bold">Payment Amount (Rs.)</label>
+              <div class="input-group">
+                <span class="input-group-text">₹</span>
+                <input type="number" step="0.01" min="1" class="form-control" id="payment-amount" placeholder="0.00" required>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="payment-method" class="form-label fw-bold">Payment Method</label>
+              <select class="form-select" id="payment-method" required>
+                <option value="Cash">Cash</option>
+                <option value="UPI">UPI (GPay / PhonePe / Paytm)</option>
+                <option value="Bank Transfer">Bank Transfer (IMPS / NEFT)</option>
+                <option value="Cheque">Cheque</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="payment-date" class="form-label fw-bold">Payment Date</label>
+              <input type="datetime-local" class="form-control" id="payment-date" required>
+            </div>
+
+            <div class="mb-3">
+              <label for="payment-remarks" class="form-label fw-bold">Remarks / Ref No.</label>
+              <textarea class="form-control" id="payment-remarks" rows="2" placeholder="Reference ID or bank notes..."></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary-custom w-100 py-2.5 d-flex align-items-center justify-content-center gap-1.5 shadow-sm">
+              <i class="bi bi-wallet-fill"></i> Record Payment
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Recent Payments Section -->
+      <div class="col-lg-8">
+        <div class="card-custom h-100">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="fw-bold m-0 text-slate-800">Recent Disbursements</h4>
+            <span class="text-xs text-muted font-semibold" id="payments-count">Logs: 0</span>
+          </div>
+
+          <div class="border border-slate-100 rounded-xl overflow-hidden shadow-sm bg-white" style="border-radius: var(--radius-md);">
+            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+              <table class="table table-custom table-hover">
+                <thead>
+                  <tr class="sticky-top">
+                    <th>Date</th>
+                    <th>Vendor Name</th>
+                    <th>Method</th>
+                    <th class="text-end">Amount</th>
+                    <th class="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="payments-table-body">
+                  <tr>
+                    <td colspan="5" class="text-center py-5 text-muted font-medium">
+                      <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                      Loading Payments Registry...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- jsPDF via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Config and Common Script -->
+  <script src="config.js"></script>
+  <script src="common.js"></script>
+
+  <script>
+    let paymentsList = [];
+    let vendorsList = [];
+
+    // Helper to format date input
+    function setDatePlaceholder() {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      $('#payment-date').val(now.toISOString().slice(0, 16));
+    }
+
+    async function loadData() {
+      try {
+        const vRes = await callApi('getVendors');
+        vendorsList = vRes.vendors;
+        
+        // Populate vendor options
+        const vendorSelect = $('#payment-vendor');
+        vendorSelect.empty().append('<option value="">-- Choose Vendor --</option>');
+        vendorsList.forEach(v => {
+          vendorSelect.append(`<option value="${v.vendor_id}">${v.vendor_name} (${v.vendor_type})</option>`);
+        });
+
+        // Load payments
+        const pRes = await callApi('getPayments');
+        paymentsList = pRes.payments;
+        renderPaymentsTable();
+      } catch (err) {
+        console.error(err);
+        $('#payments-table-body').html(`
+          <tr>
+            <td colspan="5" class="text-center py-5 text-danger font-bold">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i> Failed to retrieve payment logs.
+            </td>
+          </tr>
+        `);
+      }
+    }
+
+    function renderPaymentsTable() {
+      const tbody = $('#payments-table-body');
+      tbody.empty();
+
+      $('#payments-count').text(`Logs: ${paymentsList.length}`);
+
+      if (paymentsList.length === 0) {
+        tbody.html(`
+          <tr>
+            <td colspan="5" class="text-center py-5 text-muted font-medium">
+              No payments recorded yet.
+            </td>
+          </tr>
+        `);
+        return;
+      }
+
+      paymentsList.forEach(p => {
+        const date = formatDate(p.payment_date).split(' ')[0];
+        const rowHtml = `
+          <tr>
+            <td>${date}</td>
+            <td class="text-primary fw-bold">${p.vendor_name} <span class="text-xs text-muted font-normal">(${p.vendor_type})</span></td>
+            <td>${p.payment_method}</td>
+            <td class="text-end text-success font-bold">${formatCurrency(p.amount)}</td>
+            <td class="text-end whitespace-nowrap">
+              <button class="btn btn-sm btn-light border px-2.5 py-1.5" onclick="downloadReceiptPDF(${p.payment_id})" title="Print Receipt">
+                <i class="bi bi-printer-fill text-primary"></i>
+              </button>
+              <button class="btn btn-sm btn-light border px-2.5 py-1.5 ms-1" onclick="deletePaymentLog(${p.payment_id})" title="Delete Log">
+                <i class="bi bi-trash-fill text-danger"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+        tbody.append(rowHtml);
+      });
+    }
+
+    $('#payment-form').on('submit', async function(e) {
+      e.preventDefault();
+      
+      const payload = {
+        vendor_id: parseInt($('#payment-vendor').val()),
+        amount: parseFloat($('#payment-amount').val()),
+        payment_method: $('#payment-method').val(),
+        payment_date: new Date($('#payment-date').val()).toISOString(),
+        remarks: $('#payment-remarks').val().trim(),
+        createdBy: getSessionUser().name
+      };
+
+      try {
+        await callApi('addPayment', {}, true, payload);
+        loadData();
+        
+        // Reset form except date placeholder
+        $('#payment-vendor').val('');
+        $('#payment-amount').val('');
+        $('#payment-remarks').val('');
+        setDatePlaceholder();
+        
+        showAlert('Payment transaction recorded successfully.', 'success');
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    async function deletePaymentLog(paymentId) {
+      if (!confirm("Are you sure you want to delete this payment record? This will revert the transaction in the ledger!")) {
+        return;
+      }
+      try {
+        await callApi('deletePayment', {}, true, { paymentId: paymentId });
+        loadData();
+        showAlert('Payment transaction deleted successfully.', 'danger');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Client-side Receipt PDF generation
+    function downloadReceiptPDF(paymentId) {
+      const p = paymentsList.find(item => item.payment_id == paymentId);
+      if (!p) return;
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      // Title header
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(22);
+      doc.setTextColor(99, 102, 241);
+      doc.text("THREAD TRACK", 105, 20, { alignment: "center" });
+
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(100, 116, 139);
+      doc.text("Saree Manufacturing Management System", 105, 26, { alignment: "center" });
+
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(14);
+      doc.setTextColor(30, 41, 59);
+      doc.text("PAYMENT RECEIPT", 105, 36, { alignment: "center" });
+
+      // Separator
+      doc.setDrawColor(226, 232, 240);
+      doc.line(15, 42, 195, 42);
+
+      // Metadata layout
+      doc.setFontSize(10);
+      doc.text("Paid To Details", 15, 52);
+      doc.setFont("Helvetica", "normal");
+      doc.text(`Vendor: ${p.vendor_name}`, 15, 58);
+      doc.text(`Category: ${p.vendor_type}`, 15, 64);
+      doc.text(`Mobile: ${p.mobile || 'N/A'}`, 15, 70);
+
+      doc.setFont("Helvetica", "bold");
+      doc.text("Receipt Summary", 130, 52);
+      doc.setFont("Helvetica", "normal");
+      doc.text(`Receipt No: PAY-${p.payment_id}`, 130, 58);
+      doc.text(`Date Paid: ${formatDate(p.payment_date).split(' ')[0]}`, 130, 64);
+      doc.text(`Method: ${p.payment_method}`, 130, 70);
+
+      // Receipt details Table
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(248, 250, 252);
+      doc.rect(15, 80, 180, 40, "FD");
+
+      doc.setFont("Helvetica", "bold");
+      doc.text("Transaction Details:", 20, 88);
+      doc.setFont("Helvetica", "normal");
+      doc.text(`Payment received in full via ${p.payment_method}.`, 20, 96);
+      doc.text(`Remarks: ${p.remarks || 'None'}`, 20, 104);
+      doc.text(`Recorded By: ${p.created_by || 'System'}`, 20, 112);
+
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text(`Amount Paid: Rs. ${parseFloat(p.amount).toFixed(2)}`, 110, 112);
+
+      // Signatures
+      const finalY = 150;
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text("_________________________", 15, finalY);
+      doc.text("Authorized Signatory", 15, finalY + 6);
+
+      doc.text("_________________________", 140, finalY);
+      doc.text("Vendor Signature", 140, finalY + 6);
+
+      doc.save(`payment_receipt_${p.payment_id}.pdf`);
+    }
+
+    $(document).ready(function() {
+      setDatePlaceholder();
+      loadData();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reports - Thread Track</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Google Fonts: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Custom Stylesheet -->
+  <link href="style.css" rel="stylesheet">
+</head>
+<body>
+  <!-- Navbar Placeholder -->
+  <div id="navbar-placeholder"></div>
+
+  <div class="container main-container">
+    <!-- Alert Container -->
+    <div id="alert-container"></div>
+
+    <!-- Header -->
+    <div class="mb-4">
+      <h1 class="fw-black text-slate-800 tracking-tight m-0">Manufacturing Analytics</h1>
+      <p class="text-muted mt-1 m-0">Generate audits, production tracking, and outstanding liabilities</p>
+    </div>
+
+    <!-- Report Control Panel -->
+    <div class="card-custom mb-4">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label for="report-type" class="form-label font-semibold text-muted text-xs uppercase">Report Category</label>
+          <select class="form-select" id="report-type">
+            <option value="outstanding">Outstanding Liabilities</option>
+            <option value="production">Production History</option>
+            <option value="payments">Payments Log</option>
+          </select>
+        </div>
+
+        <div class="col-md-3">
+          <label for="report-vendor" class="form-label font-semibold text-muted text-xs uppercase">Select Vendor</label>
+          <select class="form-select" id="report-vendor">
+            <option value="All">All Vendors</option>
+          </select>
+        </div>
+
+        <div class="col-md-2" id="vendor-type-wrapper">
+          <label for="report-vendor-type" class="form-label font-semibold text-muted text-xs uppercase">Vendor Category</label>
+          <select class="form-select" id="report-vendor-type">
+            <option value="All">All Types</option>
+            <option value="Dyed">Dyed</option>
+            <option value="Embroidery">Embroidery</option>
+            <option value="Stitching">Stitching</option>
+            <option value="Diamond">Diamond</option>
+            <option value="Folding">Folding</option>
+          </select>
+        </div>
+
+        <div class="col-md-2 d-none" id="stage-wrapper">
+          <label for="report-stage" class="form-label font-semibold text-muted text-xs uppercase">Saree Stage</label>
+          <select class="form-select" id="report-stage">
+            <option value="All">All Stages</option>
+            <option value="Dyed">Dyed</option>
+            <option value="Embroidery">Embroidery</option>
+            <option value="Stitching">Stitching</option>
+            <option value="Diamond">Diamond</option>
+            <option value="Folding">Folding</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </div>
+
+        <div class="col-md-2">
+          <label for="report-start-date" class="form-label font-semibold text-muted text-xs uppercase">From Date</label>
+          <input type="date" class="form-control" id="report-start-date">
+        </div>
+
+        <div class="col-md-2">
+          <label for="report-end-date" class="form-label font-semibold text-muted text-xs uppercase">To Date</label>
+          <input type="date" class="form-control" id="report-end-date">
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <button class="btn btn-light border fw-bold px-4" id="btn-reset">Reset</button>
+        <button class="btn btn-primary-custom d-inline-flex align-items-center gap-1.5 px-4 shadow-sm" id="btn-generate">
+          <i class="bi bi-search"></i> Query Report
+        </button>
+      </div>
+    </div>
+
+    <!-- Generated Content Display -->
+    <div class="card-custom d-none" id="report-results-card">
+      <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h4 class="fw-bold m-0 text-slate-800" id="results-title">Outstanding Dues Ledger</h4>
+        <button class="btn btn-success fw-bold text-white d-inline-flex align-items-center gap-1.5" id="btn-export-pdf" style="border-radius: var(--radius-sm);">
+          <i class="bi bi-file-earmark-pdf-fill"></i> Download PDF Report
+        </button>
+      </div>
+
+      <div class="border border-slate-100 rounded-xl overflow-hidden shadow-sm bg-white" style="border-radius: var(--radius-md);">
+        <div class="table-responsive">
+          <table class="table table-custom table-hover">
+            <thead id="results-table-head">
+              <!-- Injected dynamically -->
+            </thead>
+            <tbody id="results-table-body">
+              <!-- Injected dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- jsPDF & AutoTable via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+  <!-- Config and Common Script -->
+  <script src="config.js"></script>
+  <script src="common.js"></script>
+
+  <script>
+    let vendorsList = [];
+    let reportData = [];
+
+    async function loadVendors() {
+      try {
+        const res = await callApi('getVendors');
+        vendorsList = res.vendors;
+        
+        const select = $('#report-vendor');
+        select.empty().append('<option value="All">All Vendors</option>');
+        vendorsList.forEach(v => {
+          select.append(`<option value="${v.vendor_id}">${v.vendor_name} (${v.vendor_type})</option>`);
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Toggle filters visibility based on category
+    $('#report-type').on('change', function() {
+      const type = $(this).val();
+      if (type === 'outstanding' || type === 'payments') {
+        $('#vendor-type-wrapper').removeClass('d-none');
+        $('#stage-wrapper').addClass('d-none');
+      } else if (type === 'production') {
+        $('#vendor-type-wrapper').addClass('d-none');
+        $('#stage-wrapper').removeClass('d-none');
+      }
+    });
+
+    $('#btn-generate').on('click', async function() {
+      const category = $('#report-type').val();
+      
+      const params = {
+        reportType: category,
+        vendorId: $('#report-vendor').val(),
+        vendorType: $('#report-vendor-type').val(),
+        stage: $('#report-stage').val(),
+        startDate: $('#report-start-date').val(),
+        endDate: $('#report-end-date').val()
+      };
+
+      try {
+        $('#report-results-card').removeClass('d-none');
+        $('#results-table-body').html(`
+          <tr>
+            <td colspan="6" class="text-center py-5 text-muted">
+              <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+              Compiling Report Data...
+            </td>
+          </tr>
+        `);
+
+        const res = await callApi('getReports', params);
+        
+        if (category === 'outstanding') {
+          reportData = res.outstanding;
+          renderOutstanding();
+        } else if (category === 'production') {
+          reportData = res.production;
+          renderProduction();
+        } else if (category === 'payments') {
+          reportData = res.payments;
+          renderPayments();
+        }
+      } catch (err) {
+        console.error(err);
+        $('#results-table-body').html(`
+          <tr>
+            <td colspan="6" class="text-center py-5 text-danger font-bold">
+              Failed to compile report. Please verify criteria.
+            </td>
+          </tr>
+        `);
+      }
+    });
+
+    function renderOutstanding() {
+      $('#results-title').text('Outstanding Liabilities Statement');
+      
+      const head = $('#results-table-head');
+      head.html(`
+        <tr>
+          <th>Vendor Name</th>
+          <th>Vendor Type</th>
+          <th>Contact</th>
+          <th class="text-end">Work Value (Cr)</th>
+          <th class="text-end">Total Paid (Dr)</th>
+          <th class="text-end">Outstanding Balance</th>
+        </tr>
+      `);
+
+      const tbody = $('#results-table-body');
+      tbody.empty();
+
+      if (reportData.length === 0) {
+        tbody.html('<tr><td colspan="6" class="text-center py-4 text-muted">No outstanding dues found matching criteria.</td></tr>');
+        return;
+      }
+
+      let totalDues = 0;
+      reportData.forEach(item => {
+        totalDues += item.pending_balance;
+        tbody.append(`
+          <tr>
+            <td class="text-primary fw-bold">${item.vendor_name}</td>
+            <td><span class="badge border border-secondary-subtle text-secondary">${item.vendor_type}</span></td>
+            <td>${item.mobile}</td>
+            <td class="text-end">${formatCurrency(item.total_work)}</td>
+            <td class="text-end">${formatCurrency(item.total_paid)}</td>
+            <td class="text-end text-danger fw-bold">${formatCurrency(item.pending_balance)}</td>
+          </tr>
+        `);
+      });
+
+      // Total row
+      tbody.append(`
+        <tr class="bg-light">
+          <td colspan="5" class="fw-bold text-slate-800">TOTAL LIABILITY</td>
+          <td class="text-end text-danger fw-black">${formatCurrency(totalDues)}</td>
+        </tr>
+      `);
+    }
+
+    function renderProduction() {
+      $('#results-title').text('Production History Ledger');
+      
+      const head = $('#results-table-head');
+      head.html(`
+        <tr>
+          <th>Lot No</th>
+          <th>Design Name</th>
+          <th>Quantity</th>
+          <th>Current Stage</th>
+          <th>Current Vendor</th>
+          <th>Status</th>
+        </tr>
+      `);
+
+      const tbody = $('#results-table-body');
+      tbody.empty();
+
+      if (reportData.length === 0) {
+        tbody.html('<tr><td colspan="6" class="text-center py-4 text-muted">No production lots found matching criteria.</td></tr>');
+        return;
+      }
+
+      reportData.forEach(item => {
+        let statusBadge = '';
+        if (item.status === 'Completed') {
+          statusBadge = '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">Completed</span>';
+        } else if (item.status === 'Hold') {
+          statusBadge = '<span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle">Hold</span>';
+        } else {
+          statusBadge = '<span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle">In Process</span>';
+        }
+
+        tbody.append(`
+          <tr>
+            <td class="text-primary fw-bold">Lot #${item.lot_number}</td>
+            <td>${item.design_name}</td>
+            <td>${item.quantity} pcs</td>
+            <td><span class="badge border border-info-subtle text-info">${item.current_stage}</span></td>
+            <td>${item.vendor_name || '<span class="text-muted italic">In Workshop</span>'}</td>
+            <td>${statusBadge}</td>
+          </tr>
+        `);
+      });
+    }
+
+    function renderPayments() {
+      $('#results-title').text('Payments Disbursed Statement');
+      
+      const head = $('#results-table-head');
+      head.html(`
+        <tr>
+          <th>Date</th>
+          <th>Vendor Name</th>
+          <th>Vendor Type</th>
+          <th>Method</th>
+          <th>Remarks</th>
+          <th class="text-end">Amount</th>
+        </tr>
+      `);
+
+      const tbody = $('#results-table-body');
+      tbody.empty();
+
+      if (reportData.length === 0) {
+        tbody.html('<tr><td colspan="6" class="text-center py-4 text-muted">No payments found matching criteria.</td></tr>');
+        return;
+      }
+
+      let totalPaid = 0;
+      reportData.forEach(item => {
+        totalPaid += item.amount;
+        tbody.append(`
+          <tr>
+            <td>${formatDate(item.payment_date).split(' ')[0]}</td>
+            <td class="text-primary fw-bold">${item.vendor_name}</td>
+            <td>${item.vendor_type}</td>
+            <td>${item.payment_method}</td>
+            <td>${item.remarks || '-'}</td>
+            <td class="text-end text-success fw-bold">${formatCurrency(item.amount)}</td>
+          </tr>
+        `);
+      });
+
+      // Total row
+      tbody.append(`
+        <tr class="bg-light">
+          <td colspan="5" class="fw-bold text-slate-800">TOTAL DISBURSED</td>
+          <td class="text-end text-success fw-black">${formatCurrency(totalPaid)}</td>
+        </tr>
+      `);
+    }
+
+    // Export PDF Report Client-side
+    $('#btn-export-pdf').on('click', function() {
+      const category = $('#report-type').val();
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      // Heading Title
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(22);
+      doc.setTextColor(99, 102, 241);
+      doc.text("THREAD TRACK", 105, 20, { alignment: "center" });
+
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(100, 116, 139);
+      doc.text("Saree Manufacturing Management System", 105, 26, { alignment: "center" });
+
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(30, 41, 59);
+
+      let title = '';
+      let headers = [];
+      let bodyData = [];
+
+      const start = $('#report-start-date').val();
+      const end = $('#report-end-date').val();
+      const periodStr = (start || end) ? `Period: ${start || 'Start'} to ${end || 'End'}` : 'Period: All Time';
+
+      if (category === 'outstanding') {
+        title = "OUTSTANDING LIABILITIES REPORT";
+        headers = [["Vendor Name", "Vendor Type", "Contact Mobile", "Work Value", "Total Paid", "Outstanding Dues"]];
+        
+        let sumDues = 0;
+        bodyData = reportData.map(item => {
+          sumDues += item.pending_balance;
+          return [
+            item.vendor_name,
+            item.vendor_type,
+            item.mobile,
+            `Rs. ${item.total_work.toFixed(2)}`,
+            `Rs. ${item.total_paid.toFixed(2)}`,
+            `Rs. ${item.pending_balance.toFixed(2)}`
+          ];
+        });
+        bodyData.push([
+          "TOTAL LIABILITY", "", "", "", "", `Rs. ${sumDues.toFixed(2)}`
+        ]);
+
+      } else if (category === 'production') {
+        title = "PRODUCTION HISTORY STATUS REPORT";
+        headers = [["Lot No", "Design Name", "Quantity", "Current Stage", "Current Vendor", "Status"]];
+        bodyData = reportData.map(item => [
+          `Lot #${item.lot_number}`,
+          item.design_name,
+          `${item.quantity} pcs`,
+          item.current_stage,
+          item.vendor_name || 'In Workshop',
+          item.status
+        ]);
+
+      } else if (category === 'payments') {
+        title = "PAYMENTS DISBURSED REPORT";
+        headers = [["Date", "Vendor Name", "Vendor Type", "Method", "Remarks", "Amount"]];
+        
+        let sumPaid = 0;
+        bodyData = reportData.map(item => {
+          sumPaid += item.amount;
+          return [
+            formatDate(item.payment_date).split(' ')[0],
+            item.vendor_name,
+            item.vendor_type,
+            item.payment_method,
+            item.remarks || '-',
+            `Rs. ${item.amount.toFixed(2)}`
+          ];
+        });
+        bodyData.push([
+          "TOTAL PAID", "", "", "", "", `Rs. ${sumPaid.toFixed(2)}`
+        ]);
+      }
+
+      doc.text(title, 105, 36, { alignment: "center" });
+
+      // Line Separator
+      doc.setDrawColor(226, 232, 240);
+      doc.line(15, 42, 195, 42);
+
+      // Meta Block
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(`Report Generated: ${formatDate(new Date())}`, 15, 49);
+      doc.text(periodStr, 130, 49);
+
+      // Render Table
+      doc.autoTable({
+        head: headers,
+        body: bodyData,
+        startY: 55,
+        theme: 'striped',
+        headStyles: { fillColor: [99, 102, 241], fontStyle: 'bold' },
+        styles: { fontSize: 9 },
+        didParseCell: function(data) {
+          // Highlight totals row in bold
+          if (data.row.index === bodyData.length - 1 && (category === 'outstanding' || category === 'payments')) {
+            data.cell.styles.fontStyle = 'bold';
+            if (category === 'outstanding') {
+              data.cell.styles.textColor = [220, 38, 38]; // red
+            } else {
+              data.cell.styles.textColor = [16, 185, 129]; // green
+            }
+          }
+        }
+      });
+
+      // Save
+      doc.save(`${category}_report_${new Date().toISOString().split('T')[0]}.pdf`);
+    });
+
+    // Reset controls
+    $('#btn-reset').on('click', function() {
+      $('#report-type').val('outstanding').trigger('change');
+      $('#report-vendor').val('All');
+      $('#report-vendor-type').val('All');
+      $('#report-stage').val('All');
+      $('#report-start-date').val('');
+      $('#report-end-date').val('');
+      $('#report-results-card').addClass('d-none');
+    });
+
+    $(document).ready(function() {
+      loadVendors();
+    });
+  </script>
+</body>
+</html>

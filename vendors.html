@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vendors & Hisab - Thread Track</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Google Fonts: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Custom Stylesheet -->
+  <link href="style.css" rel="stylesheet">
+</head>
+<body>
+  <!-- Navbar Placeholder -->
+  <div id="navbar-placeholder"></div>
+
+  <div class="container main-container">
+    <!-- Alert Container -->
+    <div id="alert-container"></div>
+
+    <!-- Header Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+      <div>
+        <h1 class="fw-black text-slate-800 tracking-tight m-0">Vendors Hisab</h1>
+        <p class="text-muted mt-1 m-0">Manage vendor ledger ledgers and records</p>
+      </div>
+      <div>
+        <button class="btn btn-primary-custom d-inline-flex align-items-center gap-2 shadow-sm" id="btn-add-vendor">
+          <i class="bi bi-plus-circle-fill"></i>
+          <span>Add Vendor</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="card-custom mb-4">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label font-semibold text-muted text-xs uppercase">Search Vendor Name</label>
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" class="form-control border-start-0 ps-0" id="vendor-search" placeholder="Search vendor by name or mobile...">
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label font-semibold text-muted text-xs uppercase">Filter by Type</label>
+          <select class="form-select" id="vendor-type-filter">
+            <option value="All">All Types</option>
+            <option value="Dyed">Dyed</option>
+            <option value="Embroidery">Embroidery</option>
+            <option value="Stitching">Stitching</option>
+            <option value="Diamond">Diamond</option>
+            <option value="Folding">Folding</option>
+          </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+          <button class="btn btn-light border w-100 fw-bold" id="btn-reset-filters" style="border-radius: var(--radius-sm);">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="border border-slate-100 rounded-xl overflow-hidden shadow-sm bg-white" style="border-radius: var(--radius-md);">
+      <div class="table-responsive">
+        <table class="table table-custom table-hover">
+          <thead>
+            <tr>
+              <th>Vendor Name</th>
+              <th>Category</th>
+              <th>Contact</th>
+              <th>Total Work</th>
+              <th>Total Paid</th>
+              <th>Outstanding Balance</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="vendors-table-body">
+            <tr>
+              <td colspan="7" class="text-center py-5 text-muted font-medium">
+                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                Loading Vendor List...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALS -->
+
+  <!-- Add/Edit Vendor Modal -->
+  <div class="modal fade" id="vendorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content modal-content-custom">
+        <div class="modal-header modal-header-custom">
+          <h5 class="modal-title fw-bold" id="vendor-modal-title">Add New Vendor</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="vendor-form">
+          <input type="hidden" id="edit-vendor-id">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="vendor-name" class="form-label fw-bold">Vendor Name</label>
+              <input type="text" class="form-control" id="vendor-name" required placeholder="e.g. Laxmi Dyeing">
+            </div>
+            <div class="mb-3">
+              <label for="vendor-type" class="form-label fw-bold">Vendor Type / Stage</label>
+              <select class="form-select" id="vendor-type" required>
+                <option value="Dyed">Dyed</option>
+                <option value="Embroidery">Embroidery</option>
+                <option value="Stitching">Stitching</option>
+                <option value="Diamond">Diamond</option>
+                <option value="Folding">Folding</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="vendor-mobile" class="form-label fw-bold">Mobile Number</label>
+              <input type="text" class="form-control" id="vendor-mobile" required placeholder="e.g. 9876543210">
+            </div>
+            <div class="mb-3">
+              <label for="vendor-address" class="form-label fw-bold">Address</label>
+              <textarea class="form-control" id="vendor-address" rows="2" placeholder="Street details..."></textarea>
+            </div>
+            <div class="mb-3">
+              <label for="vendor-gst" class="form-label fw-bold">GST Number</label>
+              <input type="text" class="form-control" id="vendor-gst" placeholder="e.g. 24AAAAA1111A1Z1">
+            </div>
+            <div class="mb-3">
+              <label for="vendor-notes" class="form-label fw-bold">Notes</label>
+              <textarea class="form-control" id="vendor-notes" rows="2" placeholder="Payment conditions, rates, etc..."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer modal-footer-custom">
+            <button type="button" class="btn btn-light border fw-bold" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary-custom" id="vendor-submit-btn">Save Vendor</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detailed Ledger (Hisab) Modal -->
+  <div class="modal fade" id="ledgerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content modal-content-custom">
+        <div class="modal-header modal-header-custom">
+          <h5 class="modal-title fw-bold" id="ledger-modal-title">Vendor Ledger Ledger</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Quick Ledger Summary -->
+          <div class="row g-3 mb-4 text-center">
+            <div class="col-md-4">
+              <div class="p-3 border rounded bg-light" style="border-radius: var(--radius-sm);">
+                <span class="text-xs text-muted font-semibold uppercase d-block">Completed Work (Cr)</span>
+                <h4 class="fw-bold text-slate-800 m-0" id="ledger-total-work">₹0.00</h4>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-3 border rounded bg-light" style="border-radius: var(--radius-sm);">
+                <span class="text-xs text-muted font-semibold uppercase d-block">Total Payments Made (Dr)</span>
+                <h4 class="fw-bold text-success m-0" id="ledger-total-paid">₹0.00</h4>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-3 border rounded bg-light" style="border-radius: var(--radius-sm);">
+                <span class="text-xs text-muted font-semibold uppercase d-block">Net Outstanding Payable</span>
+                <h4 class="fw-bold text-danger m-0" id="ledger-outstanding">₹0.00</h4>
+              </div>
+            </div>
+          </div>
+
+          <!-- Transaction List -->
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold text-slate-800 m-0">Statement Registry</h6>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-primary fw-bold d-flex align-items-center gap-1.5" id="btn-download-statement">
+                <i class="bi bi-download"></i> Download Statement PDF
+              </button>
+            </div>
+          </div>
+          
+          <div class="border border-slate-100 rounded-xl overflow-hidden shadow-sm bg-white" style="border-radius: var(--radius-md);">
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+              <table class="table table-custom table-hover">
+                <thead>
+                  <tr class="sticky-top">
+                    <th>Date</th>
+                    <th>Transaction Details</th>
+                    <th class="text-end">Work Completed (Cr)</th>
+                    <th class="text-end">Paid Out (Dr)</th>
+                    <th class="text-end">Outstanding Dues</th>
+                  </tr>
+                </thead>
+                <tbody id="ledger-table-body">
+                  <!-- Injected via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer modal-footer-custom justify-content-between">
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-danger fw-bold d-flex align-items-center gap-1.5" id="btn-delete-vendor">
+              <i class="bi bi-trash-fill"></i> Delete Vendor
+            </button>
+            <button class="btn btn-outline-secondary fw-bold d-flex align-items-center gap-1.5" id="btn-edit-vendor">
+              <i class="bi bi-pencil-fill"></i> Edit Profile
+            </button>
+          </div>
+          <button type="button" class="btn btn-light border fw-bold" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- jsPDF & AutoTable via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+  <!-- Config and Common Script -->
+  <script src="config.js"></script>
+  <script src="common.js"></script>
+
+  <script>
+    let vendorsHisab = [];
+    let activeLedger = null;
+
+    async function loadVendors() {
+      try {
+        const res = await callApi('getHisab');
+        vendorsHisab = res.hisab;
+        renderVendorsTable();
+      } catch (err) {
+        console.error(err);
+        $('#vendors-table-body').html(`
+          <tr>
+            <td colspan="7" class="text-center py-5 text-danger font-bold">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i> Failed to retrieve vendor accounts.
+            </td>
+          </tr>
+        `);
+      }
+    }
+
+    function renderVendorsTable() {
+      const tableBody = $('#vendors-table-body');
+      tableBody.empty();
+
+      const searchVal = $('#vendor-search').val().toLowerCase();
+      const typeVal = $('#vendor-type-filter').val();
+
+      let filtered = vendorsHisab;
+
+      if (searchVal) {
+        filtered = filtered.filter(v => 
+          v.vendor_name.toLowerCase().includes(searchVal) || 
+          v.mobile.includes(searchVal)
+        );
+      }
+
+      if (typeVal && typeVal !== 'All') {
+        filtered = filtered.filter(v => v.vendor_type === typeVal);
+      }
+
+      if (filtered.length === 0) {
+        tableBody.html(`
+          <tr>
+            <td colspan="7" class="text-center py-5 text-muted font-medium">
+              No matching vendors found.
+            </td>
+          </tr>
+        `);
+        return;
+      }
+
+      filtered.forEach(v => {
+        const balanceColor = v.pending_balance > 0 ? 'text-danger fw-bold' : 'text-success fw-bold';
+        const rowHtml = `
+          <tr>
+            <td class="text-primary fw-bold">${v.vendor_name}</td>
+            <td><span class="badge border border-secondary-subtle text-secondary" style="font-size: 0.75rem;">${v.vendor_type}</span></td>
+            <td>${v.mobile}</td>
+            <td>${formatCurrency(v.total_work)}</td>
+            <td>${formatCurrency(v.total_paid)}</td>
+            <td class="${balanceColor}">${formatCurrency(v.pending_balance)}</td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-light border fw-bold d-inline-flex align-items-center gap-1.5" onclick="openLedgerModal(${v.vendor_id})">
+                <i class="bi bi-wallet2"></i> Ledger
+              </button>
+            </td>
+          </tr>
+        `;
+        tableBody.append(rowHtml);
+      });
+    }
+
+    async function openLedgerModal(vendorId) {
+      try {
+        const res = await callApi('getVendorLedger', { vendorId: vendorId });
+        activeLedger = res;
+
+        // Set summary cards
+        $('#ledger-modal-title').text(`${activeLedger.vendor.vendor_name} - Transaction Ledger`);
+        $('#ledger-total-work').text(formatCurrency(activeLedger.summary.total_work));
+        $('#ledger-total-paid').text(formatCurrency(activeLedger.summary.total_paid));
+        $('#ledger-outstanding').text(formatCurrency(activeLedger.summary.pending_balance));
+
+        // Render Ledger Entries
+        const tbody = $('#ledger-table-body');
+        tbody.empty();
+
+        if (activeLedger.ledger.length === 0) {
+          tbody.html(`
+            <tr>
+              <td colspan="5" class="text-center py-4 text-muted italic">
+                No ledger transactions found for this vendor.
+              </td>
+            </tr>
+          `);
+        } else {
+          activeLedger.ledger.forEach(entry => {
+            const isWork = entry.type === 'work';
+            const date = formatDate(entry.date).split(' ')[0];
+            const runningBalColor = entry.running_balance > 0 ? 'text-danger fw-bold' : 'text-success fw-bold';
+
+            const rowHtml = `
+              <tr>
+                <td>${date}</td>
+                <td>${entry.description} ${entry.remarks ? `<br><small class="text-muted italic">Remarks: ${entry.remarks}</small>` : ''}</td>
+                <td class="text-end text-slate-800 font-bold">${isWork ? formatCurrency(entry.amount) : '-'}</td>
+                <td class="text-end text-success font-bold">${!isWork ? formatCurrency(entry.amount) : '-'}</td>
+                <td class="text-end ${runningBalColor}">${formatCurrency(entry.running_balance)}</td>
+              </tr>
+            `;
+            tbody.append(rowHtml);
+          });
+        }
+
+        // Show Modal
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('ledgerModal')).show();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Add Vendor Modal handler
+    $('#btn-add-vendor').on('click', function() {
+      $('#vendor-modal-title').text('Add New Vendor');
+      $('#edit-vendor-id').val('');
+      $('#vendor-name').val('');
+      $('#vendor-mobile').val('');
+      $('#vendor-address').val('');
+      $('#vendor-gst').val('');
+      $('#vendor-notes').val('');
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('vendorModal')).show();
+    });
+
+    // Form submit handler
+    $('#vendor-form').on('submit', async function(e) {
+      e.preventDefault();
+      
+      const vendorId = $('#edit-vendor-id').val();
+      const isEdit = !!vendorId;
+
+      const payload = {
+        vendor_name: $('#vendor-name').val().trim(),
+        vendor_type: $('#vendor-type').val(),
+        mobile: $('#vendor-mobile').val().trim(),
+        address: $('#vendor-address').val().trim(),
+        gst_number: $('#vendor-gst').val().trim(),
+        notes: $('#vendor-notes').val().trim()
+      };
+
+      if (isEdit) {
+        payload.vendor_id = parseInt(vendorId);
+      }
+
+      try {
+        const action = isEdit ? 'updateVendor' : 'addVendor';
+        await callApi(action, {}, true, payload);
+        bootstrap.Modal.getInstance(document.getElementById('vendorModal')).hide();
+        
+        // Hide ledger modal if edit was triggered from ledger screen
+        const ledgerModalEl = document.getElementById('ledgerModal');
+        if (bootstrap.Modal.getInstance(ledgerModalEl)) {
+          bootstrap.Modal.getInstance(ledgerModalEl).hide();
+        }
+
+        loadVendors();
+        showAlert(isEdit ? 'Vendor profile updated successfully.' : 'Vendor added successfully.', 'success');
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    // Edit Profile button
+    $('#btn-edit-vendor').on('click', function() {
+      if (!activeLedger) return;
+      const v = activeLedger.vendor;
+
+      $('#vendor-modal-title').text(`Edit Profile: ${v.vendor_name}`);
+      $('#edit-vendor-id').val(v.vendor_id);
+      $('#vendor-name').val(v.vendor_name);
+      $('#vendor-type').val(v.vendor_type);
+      $('#vendor-mobile').val(v.mobile);
+      $('#vendor-address').val(v.address);
+      $('#vendor-gst').val(v.gst_number);
+      $('#vendor-notes').val(v.notes);
+
+      // Show vendorModal
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('vendorModal')).show();
+    });
+
+    // Delete Vendor button
+    $('#btn-delete-vendor').on('click', async function() {
+      if (!activeLedger) return;
+      const v = activeLedger.vendor;
+
+      if (!confirm(`CAUTION: Are you sure you want to delete ${v.vendor_name}? All future assignments and hisab ledgers will be disrupted!`)) {
+        return;
+      }
+
+      try {
+        await callApi('deleteVendor', {}, true, { vendorId: v.vendor_id });
+        bootstrap.Modal.getInstance(document.getElementById('ledgerModal')).hide();
+        loadVendors();
+        showAlert('Vendor deleted successfully.', 'danger');
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    // Client-side statement generation
+    $('#btn-download-statement').on('click', function() {
+      if (!activeLedger) return;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const v = activeLedger.vendor;
+
+      // Header block
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(22);
+      doc.setTextColor(99, 102, 241);
+      doc.text("THREAD TRACK", 105, 20, { alignment: "center" });
+
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(100, 116, 139);
+      doc.text("Saree Manufacturing Management Ledger", 105, 26, { alignment: "center" });
+
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(30, 41, 59);
+      doc.text("VENDOR HISAB STATEMENT", 105, 36, { alignment: "center" });
+
+      // Line Separator
+      doc.setDrawColor(226, 232, 240);
+      doc.line(15, 42, 195, 42);
+
+      // Metadata layout
+      doc.setFontSize(10);
+      doc.text("Vendor Account Details", 15, 50);
+      doc.setFont("Helvetica", "normal");
+      doc.text(`Name: ${v.vendor_name}`, 15, 56);
+      doc.text(`Type: ${v.vendor_type}`, 15, 62);
+      doc.text(`Mobile: ${v.mobile}`, 15, 68);
+      doc.text(`GST: ${v.gst_number || 'N/A'}`, 15, 74);
+      doc.text(`Address: ${v.address || 'N/A'}`, 15, 80);
+
+      doc.setFont("Helvetica", "bold");
+      doc.text("Statement Summary", 130, 50);
+      doc.setFont("Helvetica", "normal");
+      doc.text(`Statement Date: ${formatDate(new Date()).split(' ')[0]}`, 130, 56);
+      doc.text(`Total Work Cost: ${formatCurrency(activeLedger.summary.total_work)}`, 130, 62);
+      doc.text(`Total Paid Out: ${formatCurrency(activeLedger.summary.total_paid)}`, 130, 68);
+      
+      const balance = activeLedger.summary.pending_balance;
+      doc.setFont("Helvetica", "bold");
+      doc.text(`Net Outstanding: ${formatCurrency(balance)}`, 130, 75);
+
+      // Ledger Table
+      const headers = [["Date", "Description", "Work Value (Cr)", "Amount Paid (Dr)", "Balance"]];
+      const data = activeLedger.ledger.map(entry => {
+        const isWork = entry.type === 'work';
+        return [
+          formatDate(entry.date).split(' ')[0],
+          entry.description,
+          isWork ? `Rs. ${entry.amount.toFixed(2)}` : '-',
+          !isWork ? `Rs. ${entry.amount.toFixed(2)}` : '-',
+          `Rs. ${entry.running_balance.toFixed(2)}`
+        ];
+      });
+
+      doc.autoTable({
+        head: headers,
+        body: data,
+        startY: 90,
+        theme: 'striped',
+        headStyles: { fillColor: [99, 102, 241], fontStyle: 'bold' },
+        styles: { fontSize: 9 }
+      });
+
+      // Signature blocks
+      const finalY = doc.lastAutoTable.finalY + 30;
+      doc.setFont("Helvetica", "normal");
+      doc.text("_________________________", 15, finalY);
+      doc.text("Authorized Representative", 15, finalY + 6);
+
+      doc.text("_________________________", 140, finalY);
+      doc.text("Vendor Signature", 140, finalY + 6);
+
+      doc.save(`vendor_ledger_${v.vendor_name}.pdf`);
+    });
+
+    // Reset filters
+    $('#btn-reset-filters').on('click', function() {
+      $('#vendor-search').val('');
+      $('#vendor-type-filter').val('All');
+      renderVendorsTable();
+    });
+
+    $('#vendor-search, #vendor-type-filter').on('change keyup', renderVendorsTable);
+
+    $(document).ready(function() {
+      loadVendors();
+    });
+  </script>
+</body>
+</html>

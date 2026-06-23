@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Thread Track</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Google Fonts: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Custom Stylesheet -->
+  <link href="style.css" rel="stylesheet">
+</head>
+<body>
+  <!-- Navbar Placeholder -->
+  <div id="navbar-placeholder"></div>
+
+  <div class="container main-container">
+    <!-- Alert Container -->
+    <div id="alert-container"></div>
+
+    <!-- Header Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-5 flex-wrap gap-3">
+      <div>
+        <h1 class="fw-black text-slate-800 tracking-tight m-0">Overview</h1>
+        <p class="text-muted mt-1 m-0">Real-time status of your manufacturing house</p>
+      </div>
+      <div>
+        <a href="sarees.html?openModal=true" class="btn btn-primary-custom d-inline-flex align-items-center gap-2 shadow-md">
+          <i class="bi bi-plus-circle-fill"></i>
+          <span>Add Saree Lot</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- KPI Grid -->
+    <div class="row g-4 mb-5">
+      <!-- Total Lots -->
+      <div class="col-md-4">
+        <div class="card-custom card-kpi" onclick="window.location.href='sarees.html';" style="cursor: pointer;">
+          <div>
+            <p class="text-xs font-semibold text-muted uppercase tracking-wider mb-1">Total Saree Lots</p>
+            <h3 class="fw-black m-0 text-slate-800" id="stat-total-lots">-</h3>
+            <p class="text-xs text-muted font-medium mt-1 mb-0" id="stat-total-qty">- pcs total</p>
+          </div>
+          <div class="kpi-icon text-primary bg-primary-light">
+            <i class="bi bi-layers-fill"></i>
+          </div>
+        </div>
+      </div>
+      <!-- Manufacturing Cost -->
+      <div class="col-md-4">
+        <div class="card-custom card-kpi" onclick="window.location.href='reports.html';" style="cursor: pointer;">
+          <div>
+            <p class="text-xs font-semibold text-muted uppercase tracking-wider mb-1">Total Manufacturing Cost</p>
+            <h3 class="fw-black m-0 text-slate-800" id="stat-total-cost">-</h3>
+            <p class="text-xs text-muted font-medium mt-1 mb-0">Cumulative cost</p>
+          </div>
+          <div class="kpi-icon text-success" style="background-color: rgba(16, 185, 129, 0.1);">
+            <i class="bi bi-graph-up-arrow"></i>
+          </div>
+        </div>
+      </div>
+      <!-- Outstanding Payable -->
+      <div class="col-md-4">
+        <div class="card-custom card-kpi" onclick="window.location.href='vendors.html';" style="cursor: pointer;">
+          <div>
+            <p class="text-xs font-semibold text-muted uppercase tracking-wider mb-1">Outstanding Payable</p>
+            <h3 class="fw-black m-0 text-slate-800" id="stat-outstanding">-</h3>
+            <p class="text-xs text-muted font-medium mt-1 mb-0">Pending vendor Hisab</p>
+          </div>
+          <div class="kpi-icon text-danger" style="background-color: rgba(244, 63, 94, 0.1);">
+            <i class="bi bi-currency-rupee"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pipeline Grid -->
+    <div class="card-custom mb-5">
+      <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-activity text-primary animate-pulse fs-5"></i>
+          <h3 class="fs-5 fw-bold m-0 text-slate-800">Manufacturing Pipeline</h3>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <button id="clear-pipeline-filter" class="btn btn-sm btn-light text-primary d-none fw-bold" style="border-radius: var(--radius-sm);">
+            Clear Filter (Show All)
+          </button>
+          <span class="badge text-primary bg-primary-light rounded-pill px-3 py-2 d-flex align-items-center gap-1 font-semibold text-xs border border-primary-glow">
+            <i class="bi bi-graph-up"></i> Active Production
+          </span>
+        </div>
+      </div>
+
+      <div class="pipeline-grid" id="pipeline-container">
+        <!-- Pipeline Cards are dynamically injected here -->
+      </div>
+
+      <!-- Saree Lots list under pipeline stage -->
+      <div class="pt-4 border-top border-slate-100 mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h4 class="fs-6 fw-bold text-slate-800 uppercase tracking-wider m-0">
+            Lots in Stage: <span class="text-primary" id="selected-stage-title">All Pipeline Stages</span>
+          </h4>
+          <span class="text-xs text-muted font-semibold" id="filtered-count">Lots count: 0</span>
+        </div>
+
+        <div class="border border-slate-100 rounded-xl overflow-hidden shadow-sm bg-white" style="border-radius: var(--radius-md);">
+          <div class="table-responsive">
+            <table class="table table-custom table-hover">
+              <thead>
+                <tr>
+                  <th>Lot No</th>
+                  <th>Design Name</th>
+                  <th>Quantity</th>
+                  <th>Stage</th>
+                  <th>Location / Vendor</th>
+                  <th>Status</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="lots-table-body">
+                <tr>
+                  <td colspan="7" class="text-center py-5 text-muted font-medium">
+                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                    Loading Saree Lots...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Config and Common Script -->
+  <script src="config.js"></script>
+  <script src="common.js"></script>
+
+  <script>
+    let selectedStage = 'All';
+    let sareesData = [];
+    
+    const stages = [
+      { key: 'Dyed', label: 'Dyed', color: '#fbbf24' },
+      { key: 'Embroidery', label: 'Embroidery', color: '#a855f7' },
+      { key: 'Stitching', label: 'Stitching', color: '#3b82f6' },
+      { key: 'Diamond', label: 'Diamond', color: '#0ea5e9' },
+      { key: 'Folding', label: 'Folding', color: '#f43f5e' },
+      { key: 'Completed', label: 'Completed', color: '#10b981' }
+    ];
+
+    function getStageBadgeClass(stage) {
+      const colors = {
+        Dyed: 'bg-warning text-dark border-warning-subtle',
+        Embroidery: 'bg-purple text-purple border-purple-subtle',
+        Stitching: 'bg-primary text-primary border-primary-subtle',
+        Diamond: 'bg-info text-dark border-info-subtle',
+        Folding: 'bg-danger text-danger border-danger-subtle',
+        Completed: 'bg-success text-success border-success-subtle'
+      };
+      return colors[stage] || 'bg-secondary text-white';
+    }
+
+    async function loadDashboardData() {
+      try {
+        const statsRes = await callApi('getDashboardStats');
+        const sareesRes = await callApi('getSarees');
+        
+        sareesData = sareesRes.sarees;
+        
+        // Update stats card UI
+        const summary = statsRes.summary;
+        const pipeline = statsRes.pipeline;
+        
+        $('#stat-total-lots').text(summary.total_sarees_lots);
+        $('#stat-total-qty').text(summary.total_sarees_quantity);
+        $('#stat-total-cost').text(formatCurrency(summary.total_manufacturing_cost));
+        $('#stat-outstanding').text(formatCurrency(summary.total_outstanding_payable));
+        
+        // Render pipeline progression cards
+        renderPipeline(pipeline);
+        renderLotsTable();
+      } catch (err) {
+        console.error(err);
+        $('#lots-table-body').html(`
+          <tr>
+            <td colspan="7" class="text-center py-5 text-danger font-bold">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i> Failed to retrieve dashboard data. Please verify Apps Script configuration.
+            </td>
+          </tr>
+        `);
+      }
+    }
+
+    function renderPipeline(pipelineData) {
+      const container = $('#pipeline-container');
+      container.empty();
+
+      stages.forEach((stage, index) => {
+        const countObj = pipelineData[stage.key] || { count: 0, qty: 0 };
+        const isActive = selectedStage === stage.key;
+
+        const stageHtml = `
+          <div class="pipeline-item ${isActive ? 'active' : ''}" data-stage="${stage.key}">
+            <div class="pipeline-badge" style="background-color: ${stage.color};"></div>
+            <h4 class="fw-bold text-slate-800 text-sm mb-1">${stage.label}</h4>
+            <div class="mt-2">
+              <p class="fs-4 fw-black m-0 text-slate-900">${countObj.count}</p>
+              <p class="text-xs text-muted font-semibold m-0">${countObj.qty} pcs</p>
+            </div>
+          </div>
+        `;
+        container.append(stageHtml);
+      });
+
+      // Bind click triggers
+      $('.pipeline-item').on('click', function() {
+        const stage = $(this).attr('data-stage');
+        if (selectedStage === stage) {
+          selectedStage = 'All';
+          $('#clear-pipeline-filter').addClass('d-none');
+        } else {
+          selectedStage = stage;
+          $('#clear-pipeline-filter').removeClass('d-none');
+        }
+        
+        $('.pipeline-item').removeClass('active');
+        if (selectedStage !== 'All') {
+          $(`.pipeline-item[data-stage="${selectedStage}"]`).addClass('active');
+        }
+        
+        $('#selected-stage-title').text(selectedStage === 'All' ? 'All Pipeline Stages' : selectedStage);
+        renderLotsTable();
+      });
+    }
+
+    function renderLotsTable() {
+      const tableBody = $('#lots-table-body');
+      tableBody.empty();
+
+      const filteredLots = selectedStage === 'All' 
+        ? sareesData 
+        : sareesData.filter(s => s.current_stage === selectedStage);
+
+      $('#filtered-count').text(`Lots count: ${filteredLots.length}`);
+
+      if (filteredLots.length === 0) {
+        tableBody.html(`
+          <tr>
+            <td colspan="7" class="text-center py-5 text-muted font-semibold">
+              No active saree lots found in ${selectedStage === 'All' ? 'any pipeline stage' : `the ${selectedStage} stage`}.
+            </td>
+          </tr>
+        `);
+        return;
+      }
+
+      filteredLots.forEach(s => {
+        const badgeClass = getStageBadgeClass(s.current_stage);
+        
+        let statusBadge = '';
+        if (s.status === 'Completed') {
+          statusBadge = '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">Completed</span>';
+        } else if (s.status === 'Hold') {
+          statusBadge = '<span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle">Hold</span>';
+        } else {
+          statusBadge = '<span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle">In Process</span>';
+        }
+
+        const vendorDisplay = s.current_vendor_name 
+          ? `${s.current_vendor_name} <span class="text-xs text-muted font-normal">(${s.current_vendor_type})</span>`
+          : '<span class="text-muted italic">In Workshop</span>';
+
+        const rowHtml = `
+          <tr>
+            <td class="text-primary fw-bold">Lot #${s.lot_number}</td>
+            <td>${s.design_name}</td>
+            <td class="whitespace-nowrap">${s.quantity} pcs</td>
+            <td class="whitespace-nowrap">
+              <span class="badge border ${badgeClass}">${s.current_stage}</span>
+            </td>
+            <td>${vendorDisplay}</td>
+            <td class="whitespace-nowrap">${statusBadge}</td>
+            <td class="text-end whitespace-nowrap">
+              <a href="sarees.html?filterStage=${s.current_stage}" class="btn btn-sm btn-light border d-inline-flex align-items-center gap-1.5 fw-bold">
+                <i class="bi bi-eye-fill"></i> Track
+              </a>
+            </td>
+          </tr>
+        `;
+        tableBody.append(rowHtml);
+      });
+    }
+
+    $(document).ready(function() {
+      loadDashboardData();
+
+      $('#clear-pipeline-filter').on('click', function() {
+        selectedStage = 'All';
+        $(this).add('.pipeline-item').removeClass('active');
+        $(this).addClass('d-none');
+        $('#selected-stage-title').text('All Pipeline Stages');
+        renderLotsTable();
+      });
+    });
+  </script>
+</body>
+</html>
